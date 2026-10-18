@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
     "name": "API Colección de Videojuegos",
-    "description": "Colección completa para probar la API de colección de videojuegos.\n\n**Autenticación (JWT)**: ejecuta primero «0. Autenticación → Iniciar sesión». El login guarda dos tokens: `token` (access, caduca a las 8 h) y `refresh_token` (para renovar la sesión con «0. Autenticación → Renovar token (refresh)» cuando responda 401). Todas las peticiones usan el access como auth Bearer a nivel de colección.\n\n0. Autenticación (registro + login + refresh)\n1. Videojuegos (CRUD + filtros + paginación)\n2. Plataformas (CRUD)\n3. Géneros (CRUD)\n4. Desarrolladoras (CRUD)\n5. Colección personal (CRUD + favoritos)\n6. Estadísticas\n7. Usuarios (admin y gestor)\n\n**Roles**: `usuario` (por defecto) solo gestiona su propia colección; `gestor` además edita el catálogo (videojuegos, plataformas, géneros y desarrolladoras) y consulta las cuentas; `admin` además asigna los roles. Escribir en el catálogo y consultar `/api/usuarios` requiere `gestor` o `admin`; cambiar roles requiere `admin`.\n\nCuenta de ejemplo: `admin@ludoteca.local` / `admin123`\n\nRecuerda arrancar el servidor: `python -m uvicorn app.main:app --port 8000`",
+    "description": "Colección completa para probar la API de colección de videojuegos.\n\n**Autenticación (JWT)**: ejecuta primero «0. Autenticación → Iniciar sesión». El login guarda dos tokens: `token` (access, caduca a las 8 h) y `refresh_token` (para renovar la sesión con «0. Autenticación → Renovar token (refresh)» cuando responda 401). Todas las peticiones usan el access como auth Bearer a nivel de colección.\n\n0. Autenticación (registro + login + refresh + cambio de contraseña)\n1. Videojuegos (CRUD + filtros + paginación)\n2. Plataformas (CRUD)\n3. Géneros (CRUD)\n4. Desarrolladoras (CRUD)\n5. Colección personal (CRUD + favoritos)\n6. Estadísticas\n7. Usuarios (consulta admin y gestor; roles, contraseñas y borrado solo admin)\n\n**Roles**: `usuario` (por defecto) solo gestiona su propia colección; `gestor` además edita el catálogo (videojuegos, plataformas, géneros y desarrolladoras) y consulta las cuentas; `admin` además asigna los roles, restablece contraseñas y elimina cuentas. Escribir en el catálogo y consultar `/api/usuarios` requiere `gestor` o `admin`; cambiar roles, restablecer contraseñas y borrar cuentas requieren `admin`.\n\n**Contraseñas**: cada quien cambia la suya en POST /api/auth/cambiar-password (pide la actual); un admin la restablece en PATCH /api/usuarios/{id}/password sin conocerla. En ambos casos **todos los tokens anteriores quedan anulados** y hay que volver a iniciar sesión (el propio cambio devuelve un par de tokens nuevo).\n\nCuenta de ejemplo: `admin@ludoteca.local` / `admin123`\n\nRecuerda arrancar el servidor: `python -m uvicorn app.main:app --port 8000`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -131,6 +131,43 @@
               "path": ["api", "auth", "refresh"]
             },
             "description": "Renueva la sesión sin volver a escribir la contraseña: cambia el refresh_token por un par nuevo de tokens y lo guarda en {{token}} y {{refresh_token}}. Útil cuando el access ha caducado y la API responde 401."
+          }
+        },
+        {
+          "name": "Cambiar mi contraseña",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (pm.response.code === 200 && data.access_token) {",
+                  "    pm.collectionVariables.set('token', data.access_token);",
+                  "    if (data.refresh_token) { pm.collectionVariables.set('refresh_token', data.refresh_token); }",
+                  "    console.log('Contraseña cambiada: tokens nuevos guardados en la colección');",
+                  "} else {",
+                  "    console.error('No se pudo cambiar la contraseña: ' + JSON.stringify(data));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password_actual\": \"admin123\",\n  \"password_nueva\": \"clave-nueva-123\",\n  \"confirmar\": \"clave-nueva-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/cambiar-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "cambiar-password"]
+            },
+            "description": "Cambia la contraseña de la cuenta autenticada (cualquier rol). Exige la **contraseña actual**: un token robado no baste para quedarte en la cuenta. Al guardarla **mueren todos los tokens emitidos hasta ese momento** (las demás sesiones cierran con 401) y la respuesta trae un par nuevo, que esta petición guarda en {{token}} y {{refresh_token}}. Códigos: 400 si la actual no es correcta, 422 si la confirmación no coincide o la nueva es igual a la actual. Ojo: la contraseña que pongas deja de valer la anterior."
           }
         },
         {
@@ -767,6 +804,37 @@
               "path": ["api", "usuarios", "2", "rol"]
             },
             "description": "Valores: usuario | gestor | admin. Devuelve 400 si intentas cambiarte tu propio rol y 409 si quitas el último admin."
+          }
+        },
+        {
+          "name": "Restablecer contraseña (solo admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password_nueva\": \"recuperada-123\",\n  \"confirmar\": \"recuperada-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/2/password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "2", "password"]
+            },
+            "description": "Proceso de recuperación: el admin pone una contraseña nueva **sin conocer la anterior** (por eso no lo puede hacer un gestor: 403). No vale sobre la propia cuenta (400) — para la tuya usa POST /api/auth/cambiar-password, que sí pide la actual. Al guardarla se anulan los tokens de esa cuenta: sus sesiones abiertas mueren y el usuario debe volver a iniciar sesión. Devuelve 404 si la cuenta no existe y 422 si la confirmación no coincide."
+          }
+        },
+        {
+          "name": "Eliminar cuenta (solo admin)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/2",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "2"]
+            },
+            "description": "Borra la cuenta y, en cascada, los ejemplares de su colección. Solo admin (gestores y usuarios reciben 403, incluso si la cuenta no existe: el permiso se comprueba antes). Un admin no puede eliminarse a sí mismo (400) y una cuenta inexistente devuelve 404; como quien borra es admin y sobrevive, siempre queda al menos un administrador."
           }
         }
       ]

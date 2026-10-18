@@ -41,6 +41,7 @@
         <span class="usuario-avatar" id="usuario-avatar">?</span>
         <span class="usuario-nombre" id="usuario-nombre">—</span>
         <span class="usuario-rol" id="usuario-rol"></span>
+        <button class="usuario-clave" id="btn-password" title="Cambiar mi contraseña">🔑</button>
         <button class="usuario-salir" id="btn-salir" title="Cerrar sesión">Salir</button>
       </div>
     </div>
@@ -160,7 +161,8 @@
         <div>
           <h2>Usuarios de la plataforma</h2>
           <p>Consulta las cuentas de la plataforma. Los <b>gestores</b> pueden editar
-             el catálogo y los <b>administradores</b> además asignan los roles.</p>
+             el catálogo; los <b>administradores</b> además asignan roles, restablecen
+             contraseñas y eliminan cuentas (con su colección).</p>
         </div>
         <div class="hero-dato">
           <span class="hero-num" id="contador-usuarios">—</span>
@@ -206,6 +208,14 @@
     <div class="modal modal-ancho">
       <button class="modal-cerrar" data-cerrar aria-label="Cerrar">✕</button>
       <div class="modal-contenido"></div>
+    </div>
+  </div>
+
+  <!-- Modal: cambio de contraseña propia y restablecimiento (solo admin) -->
+  <div class="modal-fondo" id="modal-password" hidden>
+    <div class="modal">
+      <button class="modal-cerrar" data-cerrar aria-label="Cerrar">✕</button>
+      <div class="modal-contenido" id="modal-password-contenido"></div>
     </div>
   </div>
 

@@ -73,11 +73,20 @@ class Usuario(Base):
         String(16), default=ROL_USUARIO, server_default=ROL_USUARIO
     )
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Versión de los tokens JWT: cada cambio de contraseña la incrementa y
+    # anula todos los tokens emitidos antes (las sesiones abiertas mueren).
+    token_version: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0"
+    )
     fecha_registro: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
 
-    items: Mapped[list["ItemColeccion"]] = relationship(back_populates="usuario")
+    # Borrar la cuenta arrastra sus ejemplares, igual que el videojuego
+    # arrastra los suyos (la columna usuario_id también es CASCADE en la BD).
+    items: Mapped[list["ItemColeccion"]] = relationship(
+        back_populates="usuario", cascade="all, delete-orphan"
+    )
 
     # --- Permisos (calculados a partir del rol) ---------------------------
     @property

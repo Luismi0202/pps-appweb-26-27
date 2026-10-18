@@ -42,7 +42,8 @@ const state = {
                orden: "fecha-desc", total: 0, paginas: 1, cargado: false },
   estadisticas: false,
   editando: null,
-  usuarios: { pagina: 1, porPagina: 10, q: "", rol: "", total: 0, paginas: 1, cargado: false },
+  usuarios: { pagina: 1, porPagina: 10, q: "", rol: "", total: 0, paginas: 1,
+              cargado: false, items: [] },
 };
 
 /* ---------- Permisos según el rol de la cuenta ---------- */
@@ -690,7 +691,8 @@ async function cargarUsuarios() {
   cont.innerHTML = esqueletos(6);
   try {
     const data = await api(`/api/usuarios?${queryUsuarios()}`);
-    Object.assign(state.usuarios, { total: data.total, paginas: data.paginas, cargado: true });
+    Object.assign(state.usuarios,
+      { total: data.total, paginas: data.paginas, cargado: true, items: data.items });
     $("#contador-usuarios").textContent = data.total;
     cont.innerHTML = data.items.length
       ? data.items.map(filaUsuario).join("")
@@ -714,6 +716,15 @@ function filaUsuario(u) {
   const opciones = ROLES.map((r) =>
     `<option value="${r.valor}" ${u.rol === r.valor ? "selected" : ""}>${r.etq}</option>`
   ).join("");
+  // Borrar cuentas y restablecer contraseñas: exclusivo de admin, y nunca
+  // sobre la propia cuenta (para lo propio está el 🔑 de la cabecera).
+  const acciones = puedeCambiar ? `
+    <span class="fila-acciones">
+      <button class="fila-accion" data-accion="password"
+              title="Restablecer la contraseña de esta cuenta">🔑</button>
+      <button class="fila-accion peligro" data-accion="borrar"
+              title="Eliminar la cuenta y su colección">🗑</button>
+    </span>` : "";
   return `<article class="fila-usuario" data-id="${u.id}">
     <span class="avatar-fila">${esc((u.nombre || "?").trim().charAt(0).toUpperCase())}</span>
     <div class="fila-datos">
@@ -724,7 +735,118 @@ function filaUsuario(u) {
     <select class="select-rol" data-accion="rol"${puedeCambiar ? "" : " disabled"}${motivo ? ` title="${motivo}"` : ""}>
       ${opciones}
     </select>
+    ${acciones}
   </article>`;
+}
+
+/* ============================================================
+   CONTRASEÑA (cambio propio + restablecimiento por admin)
+   ============================================================ */
+/**
+ * Modal de contraseña con dos modos:
+ * - `objetivo = null`: cada quien cambia la suya y la API exige la actual
+ *   (un token robado no basta para quedarte en la cuenta).
+ * - `objetivo = usuario`: solo un admin le pone una clave nueva a otra cuenta
+ *   sin conocer la anterior; al hacerlo mueren las sesiones abiertas de esa
+ *   cuenta, igual que al cambiar la propia.
+ */
+function abrirPassword(objetivo = null) {
+  const esPropia = !objetivo;
+  const cont = $("#modal-password-contenido");
+  cont.innerHTML = `
+    <h2 style="margin:0 0 4px">${esPropia ? "🔑 Cambiar mi contraseña" : "🔑 Restablecer contraseña"}</h2>
+    <p class="sub" style="margin:0 0 18px">${
+      esPropia
+        ? "Al guardarla, las demás sesiones abiertas con tu cuenta se cierran."
+        : `Se le pondrá una contraseña nueva a <b>${esc(objetivo.nombre)}</b> (${esc(objetivo.email)}) y se cerrarán sus sesiones abiertas.`
+    }</p>
+    <form class="form" id="form-password">
+      ${esPropia ? `
+      <label><span>Contraseña actual *</span>
+        <input type="password" name="password_actual" required maxlength="72"
+               autocomplete="current-password" placeholder="Tu contraseña actual">
+      </label>` : ""}
+      <div class="form-fila">
+        <label><span>Nueva contraseña *</span>
+          <input type="password" name="password_nueva" required minlength="6" maxlength="72"
+                 autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+        </label>
+        <label><span>Repite la nueva contraseña *</span>
+          <input type="password" name="confirmar" required minlength="6" maxlength="72"
+                 autocomplete="new-password" placeholder="Igual que la anterior">
+        </label>
+      </div>
+      <div class="form-acciones">
+        <button type="button" class="btn btn-fantasma" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">${esPropia ? "Guardar contraseña" : "Restablecer"}</button>
+      </div>
+    </form>`;
+
+  abrirModal("#modal-password");
+
+  $("#form-password", cont).addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(ev.target);
+    const boton = $("button[type=submit]", ev.target);
+    const nueva = fd.get("password_nueva");
+
+    if (nueva !== fd.get("confirmar")) {
+      toast("Las contraseñas no coinciden", "error");
+      return;
+    }
+
+    boton.disabled = true;
+    try {
+      if (esPropia) {
+        const respuesta = await api("/api/auth/cambiar-password", {
+          method: "POST",
+          body: {
+            password_actual: fd.get("password_actual"),
+            password_nueva: nueva,
+            confirmar: fd.get("confirmar"),
+          },
+        });
+        // La API devuelve un par de tokens nuevo (versión vigente): quien
+        // cambia la clave sigue dentro y el resto de sesiones queda anulada.
+        localStorage.setItem(CLAVE_TOKEN, respuesta.access_token);
+        if (respuesta.refresh_token) localStorage.setItem(CLAVE_REFRESH, respuesta.refresh_token);
+        localStorage.setItem(CLAVE_USUARIO, JSON.stringify(respuesta.usuario));
+        pintarUsuario(respuesta.usuario);
+        toast("Contraseña actualizada. Las demás sesiones se han cerrado 🔒");
+      } else {
+        await api(`/api/usuarios/${objetivo.id}/password`, {
+          method: "PATCH",
+          body: { password_nueva: nueva, confirmar: fd.get("confirmar") },
+        });
+        toast(`Contraseña restablecida a ${objetivo.nombre} 🔒`);
+      }
+      cerrarModal("#modal-password");
+    } catch (e) {
+      toast(e.message, "error");
+      boton.disabled = false;
+    }
+  });
+}
+
+/** Elimina una cuenta y su colección (solo admin, nunca la propia). */
+async function eliminarUsuario(u) {
+  const seguro = confirm(
+    `¿Eliminar la cuenta de ${u.nombre} (${u.email})?\n` +
+    "También se borrarán los ejemplares de su colección. No se puede deshacer."
+  );
+  if (!seguro) return;
+  try {
+    await api(`/api/usuarios/${u.id}`, { method: "DELETE" });
+    toast("Cuenta eliminada 🗑");
+    // Si se vacía la última página, se vuelve atrás para no quedar en un hueco.
+    if ((state.usuarios.items || []).length <= 1 && state.usuarios.pagina > 1) {
+      state.usuarios.pagina -= 1;
+    }
+    cargarUsuarios();
+  } catch (e) {
+    toast(e.message, "error");
+    cargarUsuarios();
+  }
 }
 
 /* ============================================================
@@ -894,6 +1016,19 @@ function conectarEventos() {
     }
   });
 
+  // Usuarios (admin): restablecer contraseña y eliminar cuenta por fila.
+  $("#lista-usuarios").addEventListener("click", (e) => {
+    const accion = e.target.closest("[data-accion]");
+    if (!accion || accion.tagName === "SELECT") return;  // el select va por "change"
+    if (accion.dataset.accion !== "password" && accion.dataset.accion !== "borrar") return;
+    if (!esAdmin()) return;
+    const id = Number(accion.closest("[data-id]").dataset.id);
+    const objetivo = (state.usuarios.items || []).find((u) => u.id === id);
+    if (!objetivo) return;
+    if (accion.dataset.accion === "password") abrirPassword(objetivo);
+    else eliminarUsuario(objetivo);
+  });
+
   // Modales: cerrar con botón, fondo o Escape
   $$(".modal-fondo").forEach((fondo) => {
     fondo.addEventListener("click", (e) => {
@@ -962,6 +1097,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("#btn-salir").addEventListener("click", () => {
     if (confirm("¿Cerrar sesión?")) cerrarSesion();
   });
+
+  // Cambio de contraseña propio: disponible para cualquier rol.
+  $("#btn-password").addEventListener("click", () => abrirPassword(null));
 
   conectarEventos();
   comprobarSalud();

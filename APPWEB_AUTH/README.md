@@ -7,9 +7,10 @@ plataformas y desarrolladora en un solo JSON.
 
 Incluye **autenticación con JSON Web Tokens (JWT)** con **renovación
 automática de sesión (refresh token)** y **roles**: se puede crear cuenta,
-iniciar sesión y cada usuario tiene **su propia colección**. Hay tres
-roles: **usuario** (por defecto), **gestor** (edita el catálogo) y **admin**
-(además administra las cuentas).
+iniciar sesión, **cambiar tu contraseña** y cada usuario tiene **su propia
+colección**. Hay tres roles: **usuario** (por defecto), **gestor** (edita el
+catálogo) y **admin** (además administra las cuentas: cambia roles,
+restablece contraseñas y borra cuentas).
 
 ## Arranque rápido
 
@@ -46,13 +47,19 @@ Cualquier persona puede **crear su propia cuenta** desde el panel o con
 |-----|:---:|:---:|:---:|
 | `usuario` | Gestionar la suya | Solo lectura | — |
 | `gestor` | Gestionar la suya | Crear, editar y borrar | Solo consultar |
-| `admin` | Gestionar la suya | Crear, editar y borrar | Consultar y cambiar roles |
+| `admin` | Gestionar la suya | Crear, editar y borrar | Consultar, cambiar roles, restablecer contraseñas y borrar cuentas |
 
 - El rol se asigna al registrarse (`usuario`) y solo un **admin** puede
   cambiarlo (`PATCH /api/usuarios/{id}/rol`). Los **gestores** pueden ver y
-  buscar cuentas, pero no asignar roles.
+  buscar cuentas, pero no asignar roles, **no restablecen contraseñas** y
+  **no borran cuentas** (todo eso devuelve `403`): la gestión destructiva de
+  cuentas es exclusiva del `admin`.
 - Escribir en el catálogo (POST/PUT/DELETE) exige rol `gestor` o `admin`
   (si no, `403 Forbidden`).
+- Su propia contraseña la cambia **cualquier rol** con
+  `POST /api/auth/cambiar-password`, que exige la contraseña actual.
+- Un admin no puede borrarse a sí mismo (`400`), así que **siempre queda al
+  menos un administrador** en la plataforma.
 
 ## Autenticación (JWT)
 
@@ -65,6 +72,7 @@ al iniciar sesión.
 | POST | `/api/auth/registro` | Crea la cuenta y devuelve los tokens (201) |
 | POST | `/api/auth/login` | Inicia sesión y devuelve los tokens |
 | POST | `/api/auth/refresh` | Renueva la sesión con el `refresh_token` (sin contraseña) |
+| POST | `/api/auth/cambiar-password` | Cambia tu contraseña (pide la actual) y anula las demás sesiones |
 | GET | `/api/auth/yo` | Devuelve el usuario del token (requiere token) |
 
 Ejemplo de registro:
@@ -126,6 +134,33 @@ Detalles:
   ejemplares. El catálogo (juegos, plataformas, géneros, desarrolladoras) es
   compartido.
 
+### Cambio de contraseña
+
+Cualquier usuario cambia la suya con `POST /api/auth/cambiar-password`; los
+administradores, además, restablecen la de cualquier otra cuenta con
+`PATCH /api/usuarios/{id}/password` (sin conocer la anterior):
+
+```bash
+curl -X POST http://localhost:8000/api/auth/cambiar-password \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{"password_actual": "secreto123", "password_nueva": "clave-nueva-1", "confirmar": "clave-nueva-1"}'
+```
+
+- El cambio propio **exige la contraseña actual** (`400` si no coincide):
+  tener un token (posiblemente robado) no basta para quedarte en una cuenta.
+- El restablecimiento del admin es de **recuperación**: no pide la anterior,
+  pero **no se puede usar sobre la propia cuenta** (`400`) —para eso está el
+  flujo propio— y solo lo admite el rol `admin` (`403` para gestores y
+  usuarios).
+- Ambos exigen confirmación (`422` si no coincide) y mínimo 6 caracteres.
+- **Medida de seguridad:** al guardar la contraseña nueva se incrementa la
+  *versión de token* de la cuenta y **todos los JWT anteriores dejan de
+  servir** (access y refresh): las sesiones abiertas —tuyas o de quien te
+  hubiera suplantado— mueren y hay que volver a iniciar sesión. El propio
+  cambio devuelve un par de tokens nuevo, así que quien lo hace sigue
+  dentro sin interrupciones.
+
 ### Datos de prueba de la saga Trails
 
 Para ampliar los datos de prueba con **11 juegos de la saga
@@ -150,7 +185,7 @@ Con eso la BD queda con **21 juegos** en total.
 | 4 | **Desarrolladoras** | `/api/desarrolladoras` | CRUD de estudios/empresas |
 | 5 | **Colección** | `/api/colecciones` | Tus ejemplares: estado, fecha y precio de compra, valoración, favoritos y notas (por usuario) |
 | 6 | **Estadísticas** | `/api/estadisticas` | Resumen de tu colección, conteos por plataforma/género/estado y top valoraciones |
-| 7 | **Usuarios** | `/api/usuarios` | Consultar cuentas (**admin y gestor**); cambiar el rol (**solo admin**) |
+| 7 | **Usuarios** | `/api/usuarios` | Consultar cuentas (**admin y gestor**); cambiar el rol, restablecer contraseñas y eliminar cuentas (**solo admin**) |
 
 ## Endpoints
 
@@ -265,10 +300,21 @@ Filtros de `GET /api/colecciones`:
 | GET | `/api/usuarios` | Listado paginado con búsqueda (`q`) y filtro por `rol` (**admin y gestor**) |
 | GET | `/api/usuarios/{id}` | Detalle de una cuenta (**admin y gestor**) |
 | PATCH | `/api/usuarios/{id}/rol` | Cambiar el rol: `usuario`, `gestor` o `admin` (**solo admin**) |
+| PATCH | `/api/usuarios/{id}/password` | Restablecer la contraseña de una cuenta, sin conocer la anterior (**solo admin**) |
+| DELETE | `/api/usuarios/{id}` | Eliminar la cuenta y, en cascada, su colección (**solo admin**) |
 
 Reglas: un admin no puede cambiarse su **propio** rol (`400`) ni quitar el
 **último admin** que queda (`409`). Un **gestor** puede consultar las cuentas,
-pero no cambiar roles (`403`).
+pero no cambiar roles, **no restablece contraseñas** y **no elimina cuentas**
+(`403` en los tres casos: el permiso se comprueba antes que la existencia).
+
+En las contraseñas, además: el restablecimiento del admin no vale sobre la
+**propia cuenta** (`400` —para eso está `POST /api/auth/cambiar-password`, que
+sí exige la actual), la confirmación debe coincidir (`422`), un admin no
+puede **eliminarse a sí mismo** (`400`) y una cuenta inexistente devuelve
+`404`. Como quien borra es admin y no se borra a sí mismo, **siempre queda al
+menos un administrador**. Al cambiar o restablecer una contraseña, los
+**tokens emitidos antes quedan anulados** y esa cuenta debe volver a entrar.
 
 ## Panel web "Ludoteca"
 
@@ -293,8 +339,14 @@ Interfaz gráfica incluida y servida por la propia API en
   (solo **gestor/admin**), y "Añadir a mi colección" desde cada ficha.
 - **👥 Usuarios** (**admin y gestor**): pestaña con buscador (lupa) por nombre,
   email o rol. Los **gestores** pueden consultar cuentas (selector de rol
-  desactivado); solo los **administradores** pueden asignar roles. En la
+  desactivado); solo los **administradores** ven los botones de la fila:
+  asignar roles, **🔑 restablecer la contraseña** de una cuenta y **🗑
+  eliminarla** (con confirmación, arrastrando su colección). En la
   cabecera se muestra el rol del usuario conectado.
+- **🔑 Cambiar mi contraseña**: botón de la cabecera disponible para
+  **cualquier rol**; pide la actual, la nueva y su repetición, y al guardarla
+  cierra las demás sesiones abiertas con la cuenta (el panel recibe tokens
+  nuevos y sigue funcionando sin volver a entrar).
 
 El panel detecta automáticamente la URL de la API: si se sirve desde FastAPI
 usa rutas relativas y, si abres el HTML como archivo local, apunta a
@@ -312,7 +364,8 @@ usa rutas relativas y, si abres el HTML como archivo local, apunta a
    así el resto de peticiones ya van autenticadas.
 5. Ejecuta el resto de carpetas: General, 1. Videojuegos, 2. Plataformas,
    3. Géneros, 4. Desarrolladoras, 5. Colección, 6. Estadísticas y
-   7. Usuarios (admin y gestor; cambiar roles solo con el token del admin).
+   7. Usuarios (roles, restablecer contraseña y eliminar cuenta: todos con
+   el token del admin; el gestor solo consulta).
 
 ## Uso desde una página web
 
@@ -363,13 +416,18 @@ Con el servidor levantado:
 python tests/probar_api.py
 ```
 
-Ejecuta ~77 comprobaciones (CRUD de los 7 apartados, filtros, paginación,
+Ejecuta ~110 comprobaciones (CRUD de los 7 apartados, filtros, paginación,
 validaciones, códigos 404/409/422 y **autenticación JWT**: registro, login,
 **renovación con refresh token** (y rechazo de un access usado como refresh),
 rechazo sin token, aislamiento de la colección por usuario y **roles**: un
 `usuario` no puede escribir en el catálogo (`403`), un `gestor` sí y puede
 consultar cuentas pero no cambiar roles, y solo un `admin` administra los
-roles).
+roles). También cubre **contraseñas y borrado de cuentas**: cambio propio
+(pide la actual, valida la confirmación y **anula los tokens anteriores**),
+restablecimiento por admin (cierra las sesiones del afectado, prohibido sobre
+la propia cuenta), permisos `403` de gestor/usuario en ambas vías, y
+eliminación de una cuenta con ejemplares (cascada, `400` al borrarse a sí
+mismo, `404` inexistente y muerte de sus tokens).
 
 ## Estructura del proyecto
 
@@ -383,7 +441,7 @@ roles).
 │   ├── seed.py            # Datos de ejemplo + cuenta admin
 │   ├── datos_prueba.py     # Añade la saga Trails (idempotente)
 │   └── routers/
-│       ├── auth.py            # 0. Registro / login / refresh (JWT) + 7. Usuarios
+│       ├── auth.py            # 0. Registro / login / refresh / cambio de contraseña + 7. Usuarios
 │       ├── videojuegos.py     # 1. CRUD + filtros + paginación
 │       ├── plataformas.py     # 2. CRUD
 │       ├── generos.py         # 3. CRUD
@@ -413,6 +471,10 @@ roles).
   `LUDOTECA_SECRET_KEY` (y opcionalmente `LUDOTECA_TOKEN_MINUTOS` y
   `LUDOTECA_REFRESH_MINUTOS`) en el entorno para producción; si no, se usan
   valores de desarrollo.
+- Cada JWT lleva la **versión de token** de la cuenta: al cambiar o
+  restablecer la contraseña se incrementa y **todos los tokens anteriores
+  dejan de ser válidos** (las sesiones abiertas mueren), sin necesidad de
+  lista de revocación.
 - Código de estado: `200` OK · `201` creado · `401` sin autenticar ·
   `403` sin permisos (rol insuficiente) · `404` no existe ·
   `409` conflicto/duplicado · `422` datos inválidos.

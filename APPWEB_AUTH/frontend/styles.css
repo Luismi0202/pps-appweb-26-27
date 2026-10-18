@@ -631,6 +631,12 @@ textarea { resize: vertical; min-height: 96px; }
   padding: 6px 12px; border-radius: 999px; transition: all .2s;
 }
 .usuario-salir:hover { color: var(--rojo); border-color: var(--rojo); background: var(--rojo-t); }
+.usuario-clave {
+  width: 30px; height: 30px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--linea); background: var(--blanco);
+  display: grid; place-items: center; font-size: 14px; transition: all .2s;
+}
+.usuario-clave:hover { border-color: var(--uva); background: var(--uva-t); transform: translateY(-1px); }
 
 @media (max-width: 780px) {
   .auth-card { grid-template-columns: 1fr; }
@@ -689,9 +695,20 @@ textarea { resize: vertical; min-height: 96px; }
 .select-rol:disabled { opacity: .55; cursor: not-allowed; }
 .select-rol:focus { outline: none; border-color: var(--uva); }
 
+/* Acciones por fila (solo admin): restablecer contraseña y eliminar cuenta */
+.fila-acciones { display: flex; gap: 6px; flex: 0 0 auto; }
+.fila-accion {
+  width: 34px; height: 34px; padding: 0; border-radius: 10px; cursor: pointer;
+  border: 2px solid var(--linea); background: var(--blanco);
+  display: grid; place-items: center; font-size: 15px; transition: all .2s;
+}
+.fila-accion:hover { border-color: var(--uva); background: var(--uva-t); transform: translateY(-1px); }
+.fila-accion.peligro:hover { border-color: var(--rojo); background: var(--rojo-t); }
+
 @media (max-width: 620px) {
   .fila-usuario { flex-wrap: wrap; }
   .badge-rol { display: none; }
   .select-rol { width: 100%; }
   .usuario-rol { display: none; }
+  .fila-acciones { width: 100%; justify-content: flex-end; }
 }

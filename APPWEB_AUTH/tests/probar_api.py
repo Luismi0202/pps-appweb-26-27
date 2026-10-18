@@ -3,6 +3,10 @@
 Incluye pruebas de autenticación JWT: registro, login, renovación con
 refresh token (incluidos tokens caducados), aislamiento de la colección por
 usuario y rechazo de peticiones sin token.
+
+También cubre los permisos por rol (usuario/gestor/admin), el cambio de
+contraseña propio y el restablecimiento por admin —con la invalidación de
+todos los tokens anteriores— y el borrado de cuentas por parte de un admin.
 """
 import base64
 import hashlib
@@ -416,6 +420,193 @@ comprobar("Gestor no puede cambiar roles -> 403", codigo == 403, f"codigo={codig
 
 codigo, datos = req("PATCH", f"/api/usuarios/{id_tester}/rol", {"rol": "usuario"})
 comprobar("Restaurar rol del tester a usuario", codigo == 200 and datos["rol"] == "usuario")
+
+# ---- Cambio de contraseña propio y restablecimiento por admin -------------
+# Un usuario normal no puede tocar cuentas ajenas por ninguna de las dos vías.
+codigo, datos = req("DELETE", f"/api/usuarios/{id_admin}", token=TOKEN_PRUEBA)
+comprobar("Usuario normal no puede eliminar cuentas -> 403", codigo == 403,
+          f"codigo={codigo}")
+
+codigo, datos = req("PATCH", f"/api/usuarios/{id_admin}/password",
+                    {"password_nueva": "clave-segura-1", "confirmar": "clave-segura-1"},
+                    token=TOKEN_PRUEBA)
+comprobar("Usuario normal no puede restablecer contraseñas -> 403", codigo == 403,
+          f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/cambiar-password", {}, token=None)
+comprobar("Cambiar contraseña sin token -> 401", codigo == 401, f"codigo={codigo}")
+
+# Sesión de partida del tester: se guardan access y refresh para comprobar
+# después que el cambio de contraseña los anula a los dos.
+codigo, datos = req("POST", "/api/auth/login",
+                    {"email": EMAIL_PRUEBA, "password": CLAVE_PRUEBA}, token=None)
+comprobar("Login del tester antes de cambiar la clave", codigo == 200,
+          f"codigo={codigo}")
+TOKEN_PRUEBA = datos.get("access_token")
+REFRESH_PRUEBA = datos.get("refresh_token")
+
+# El gestor consulta cuentas, pero tampoco borra ni toca contraseñas.
+codigo, datos = req("PATCH", f"/api/usuarios/{id_tester}/rol", {"rol": "gestor"})
+comprobar("Se promueve a gestor para los controles de permisos",
+          codigo == 200 and datos["rol"] == "gestor", f"codigo={codigo}")
+
+codigo, datos = req("DELETE", f"/api/usuarios/{id_admin}", token=TOKEN_PRUEBA)
+comprobar("Gestor no puede eliminar cuentas -> 403", codigo == 403, f"codigo={codigo}")
+
+codigo, datos = req("PATCH", f"/api/usuarios/{id_admin}/password",
+                    {"password_nueva": "clave-segura-1", "confirmar": "clave-segura-1"},
+                    token=TOKEN_PRUEBA)
+comprobar("Gestor no puede restablecer contraseñas -> 403", codigo == 403,
+          f"codigo={codigo}")
+
+# Cambio propio: pide la actual y exige que la confirmación cuadre.
+CLAVE_NUEVA = "clave-nueva-123"
+codigo, datos = req("POST", "/api/auth/cambiar-password",
+                    {"password_actual": "esta-no-es", "password_nueva": CLAVE_NUEVA,
+                     "confirmar": CLAVE_NUEVA}, token=TOKEN_PRUEBA)
+comprobar("Contraseña actual incorrecta -> 400", codigo == 400, f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/cambiar-password",
+                    {"password_actual": CLAVE_PRUEBA, "password_nueva": CLAVE_NUEVA,
+                     "confirmar": "distinta-otra"}, token=TOKEN_PRUEBA)
+comprobar("Confirmación que no coincide -> 422", codigo == 422, f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/cambiar-password",
+                    {"password_actual": CLAVE_PRUEBA, "password_nueva": CLAVE_PRUEBA,
+                     "confirmar": CLAVE_PRUEBA}, token=TOKEN_PRUEBA)
+comprobar("La contraseña nueva no puede ser la misma -> 422", codigo == 422,
+          f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/cambiar-password",
+                    {"password_actual": CLAVE_PRUEBA, "password_nueva": CLAVE_NUEVA,
+                     "confirmar": CLAVE_NUEVA}, token=TOKEN_PRUEBA)
+comprobar("Cambio de contraseña -> 200 con tokens nuevos",
+          codigo == 200 and "access_token" in datos and "refresh_token" in datos,
+          f"codigo={codigo}")
+TOKEN_CAMBIADO = datos.get("access_token")
+REFRESH_CAMBIADO = datos.get("refresh_token")
+
+# La medida de seguridad: los tokens emitidos hasta ese momento mueren.
+codigo, datos = req("GET", "/api/auth/yo", token=TOKEN_PRUEBA)
+comprobar("El access anterior muere al cambiar la clave -> 401", codigo == 401,
+          f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/refresh", {"refresh_token": REFRESH_PRUEBA},
+                    token=None)
+comprobar("El refresh anterior también muere -> 401", codigo == 401, f"codigo={codigo}")
+
+codigo, datos = req("GET", "/api/auth/yo", token=TOKEN_CAMBIADO)
+comprobar("Los tokens recién emitidos siguen vivos -> 200", codigo == 200,
+          f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/login",
+                    {"email": EMAIL_PRUEBA, "password": CLAVE_PRUEBA}, token=None)
+comprobar("Login con la contraseña antigua -> 401", codigo == 401, f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/login",
+                    {"email": EMAIL_PRUEBA, "password": CLAVE_NUEVA}, token=None)
+comprobar("Login con la contraseña nueva -> 200", codigo == 200, f"codigo={codigo}")
+TOKEN_PRUEBA = datos.get("access_token") or TOKEN_CAMBIADO
+
+# Se restaura la contraseña original para el resto de pruebas.
+codigo, datos = req("POST", "/api/auth/cambiar-password",
+                    {"password_actual": CLAVE_NUEVA, "password_nueva": CLAVE_PRUEBA,
+                     "confirmar": CLAVE_PRUEBA}, token=TOKEN_PRUEBA)
+comprobar("Se restaura la contraseña del tester", codigo == 200, f"codigo={codigo}")
+TOKEN_PRUEBA = datos.get("access_token")
+
+# Restablecimiento por admin: no pide la actual (proceso de recuperación).
+codigo, datos = req("PATCH", f"/api/usuarios/{id_tester}/password",
+                    {"password_nueva": "recuperada-123", "confirmar": "recuperada-123"})
+comprobar("Admin restablece la contraseña del tester -> 200",
+          codigo == 200 and datos.get("email") == EMAIL_PRUEBA, f"codigo={codigo}")
+
+codigo, datos = req("GET", "/api/auth/yo", token=TOKEN_PRUEBA)
+comprobar("El restablecimiento cierra las sesiones del tester -> 401",
+          codigo == 401, f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/login",
+                    {"email": EMAIL_PRUEBA, "password": CLAVE_PRUEBA}, token=None)
+comprobar("El tester ya no entra con la clave vieja -> 401", codigo == 401,
+          f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/login",
+                    {"email": EMAIL_PRUEBA, "password": "recuperada-123"}, token=None)
+comprobar("...pero sí con la restablecida -> 200", codigo == 200, f"codigo={codigo}")
+TOKEN_PRUEBA = datos.get("access_token")
+
+# El admin no se restablece la suya por esta vía: para eso está el flujo
+# propio que exige conocer la contraseña actual.
+codigo, datos = req("PATCH", f"/api/usuarios/{id_admin}/password",
+                    {"password_nueva": "otra-clave-999", "confirmar": "otra-clave-999"})
+comprobar("Admin no se restablece a sí mismo por este endpoint -> 400",
+          codigo == 400, f"codigo={codigo}")
+
+codigo, datos = req("PATCH", f"/api/usuarios/{id_tester}/password",
+                    {"password_nueva": CLAVE_PRUEBA, "confirmar": CLAVE_PRUEBA})
+comprobar("Se devuelve la contraseña original del tester", codigo == 200,
+          f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/login",
+                    {"email": EMAIL_PRUEBA, "password": CLAVE_PRUEBA}, token=None)
+comprobar("El tester vuelve a entrar con su clave", codigo == 200, f"codigo={codigo}")
+TOKEN_PRUEBA = datos.get("access_token")
+
+# ---- Borrado de cuentas (solo admin) -------------------------------------
+codigo, datos = req("DELETE", f"/api/usuarios/{id_admin}")
+comprobar("Un admin no puede eliminarse a sí mismo -> 400", codigo == 400,
+          f"codigo={codigo}")
+
+codigo, datos = req("DELETE", "/api/usuarios/99999")
+comprobar("Eliminar cuenta inexistente -> 404", codigo == 404, f"codigo={codigo}")
+
+# Cuenta desechable con un ejemplar: el borrado debe arrastrar su colección.
+EMAIL_BORRABLE = "borrable@ludoteca.local"
+CLAVE_BORRABLE = "borrame-123"
+codigo, datos = req("POST", "/api/auth/registro",
+                    {"nombre": "Borrable", "email": EMAIL_BORRABLE,
+                     "password": CLAVE_BORRABLE}, token=None)
+if codigo == 409:
+    # Ya quedó de una ejecución anterior: el admin le recupera la clave.
+    codigo, lista = req("GET", f"/api/usuarios?q={EMAIL_BORRABLE}")
+    id_borrable = lista["items"][0]["id"] if lista.get("items") else None
+    req("PATCH", f"/api/usuarios/{id_borrable}/password",
+        {"password_nueva": CLAVE_BORRABLE, "confirmar": CLAVE_BORRABLE})
+    codigo, datos = req("POST", "/api/auth/login",
+                        {"email": EMAIL_BORRABLE, "password": CLAVE_BORRABLE},
+                        token=None)
+comprobar("Cuenta desechable lista (registro o recuperación)",
+          codigo in (200, 201), f"codigo={codigo}")
+TOKEN_BORRABLE = datos.get("access_token")
+id_borrable = datos["usuario"]["id"]
+
+codigo, datos = req("POST", "/api/colecciones",
+                    {"videojuego_id": 1, "plataforma_id": 1}, token=TOKEN_BORRABLE)
+comprobar("La cuenta desechable añade un ejemplar a su colección",
+          codigo == 201, f"codigo={codigo}")
+
+codigo, datos = req("DELETE", f"/api/usuarios/{id_borrable}")
+comprobar("Admin elimina la cuenta -> 200 avisando del borrado en cascada",
+          codigo == 200 and datos.get("ejemplares_eliminados", 0) >= 1,
+          f"datos={datos}")
+
+codigo, datos = req("GET", f"/api/usuarios/{id_borrable}")
+comprobar("La cuenta eliminada ya no existe -> 404", codigo == 404, f"codigo={codigo}")
+
+codigo, datos = req("POST", "/api/auth/login",
+                    {"email": EMAIL_BORRABLE, "password": CLAVE_BORRABLE}, token=None)
+comprobar("Login de la cuenta borrada -> 401", codigo == 401, f"codigo={codigo}")
+
+codigo, datos = req("GET", "/api/auth/yo", token=TOKEN_BORRABLE)
+comprobar("Sus tokens mueren con la cuenta -> 401", codigo == 401, f"codigo={codigo}")
+
+# El permiso se exige antes que la existencia: el gestor no borra nada.
+codigo, datos = req("DELETE", f"/api/usuarios/{id_borrable}", token=TOKEN_PRUEBA)
+comprobar("Gestor que intenta borrar recibe 403 (no 404)", codigo == 403,
+          f"codigo={codigo}")
+
+codigo, datos = req("PATCH", f"/api/usuarios/{id_tester}/rol", {"rol": "usuario"})
+comprobar("Restaurar rol del tester (cierre)", codigo == 200 and datos["rol"] == "usuario")
 
 print()
 if fallos:

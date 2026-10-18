@@ -3,7 +3,7 @@ import math
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
 # Autenticación
@@ -50,6 +50,60 @@ class RolActualizar(BaseModel):
     rol: Literal["usuario", "gestor", "admin"] = Field(
         ..., description="Nuevo rol de la cuenta"
     )
+
+
+class PasswordCambio(BaseModel):
+    """Cambio de la contraseña propia (cualquier rol, con la actual).
+
+    POST /api/auth/cambiar-password: exige la contraseña actual para que un
+    token robado no baste con «cambiarte» la clave. Al confirmar se anulan
+    todos los tokens emitidos hasta ese momento.
+    """
+
+    password_actual: str = Field(
+        ..., max_length=72, examples=["secreto123"],
+        description="Contraseña vigente de la cuenta",
+    )
+    password_nueva: str = Field(
+        ..., min_length=6, max_length=72, examples=["clave-nueva-123"],
+        description="Nueva contraseña (mínimo 6 caracteres, como en el registro)",
+    )
+    confirmar: str = Field(
+        ..., min_length=6, max_length=72, examples=["clave-nueva-123"],
+        description="Repetición de la contraseña nueva",
+    )
+
+    @model_validator(mode="after")
+    def _coinciden_y_cambia(self) -> "PasswordCambio":
+        if self.confirmar != self.password_nueva:
+            raise ValueError("La confirmación no coincide con la contraseña nueva")
+        if self.password_nueva == self.password_actual:
+            raise ValueError("La contraseña nueva debe ser distinta de la actual")
+        return self
+
+
+class PasswordRestablecer(BaseModel):
+    """Contraseña nueva que un admin asigna a otra cuenta (solo admin).
+
+    PATCH /api/usuarios/{id}/password: el administrador no necesita conocer
+    la contraseña anterior (es un proceso de recuperación), pero al guardarla
+    se anulan los tokens de esa cuenta: sus sesiones abiertas mueren.
+    """
+
+    password_nueva: str = Field(
+        ..., min_length=6, max_length=72, examples=["recuperada-123"],
+        description="Nueva contraseña para la cuenta (mínimo 6 caracteres)",
+    )
+    confirmar: str = Field(
+        ..., min_length=6, max_length=72, examples=["recuperada-123"],
+        description="Repetición de la contraseña nueva",
+    )
+
+    @model_validator(mode="after")
+    def _coinciden(self) -> "PasswordRestablecer":
+        if self.confirmar != self.password_nueva:
+            raise ValueError("La confirmación no coincide con la contraseña nueva")
+        return self
 
 
 class PaginaUsuarios(BaseModel):

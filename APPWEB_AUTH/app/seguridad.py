@@ -54,36 +54,41 @@ def verificar_password(password: str, password_hash: str) -> bool:
 # ---------------------------------------------------------------------------
 # Tokens JWT
 # ---------------------------------------------------------------------------
-def crear_token(usuario_id: int, tipo: str = TIPO_ACCESS) -> str:
-    """Firma un JWT. El claim ``tipo`` distingue access de refresh."""
+def crear_token(usuario_id: int, tipo: str = TIPO_ACCESS, version: int = 0) -> str:
+    """Firma un JWT. El claim ``tipo`` distingue access de refresh.
+
+    El claim ``ver`` guarda la ``token_version`` de la cuenta: si cambia la
+    contraseña, los tokens firmados con la versión anterior dejan de servir.
+    """
     ahora = datetime.now(timezone.utc)
     validez = MINUTOS_TOKEN if tipo == TIPO_ACCESS else MINUTOS_REFRESH
     payload = {
         "sub": str(usuario_id),
         "tipo": tipo,
+        "ver": version,
         "iat": ahora,
         "exp": ahora + timedelta(minutes=validez),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def crear_refresh_token(usuario_id: int) -> str:
+def crear_refresh_token(usuario_id: int, version: int = 0) -> str:
     """Token largo para renovar la sesión sin volver a pasar la contraseña."""
-    return crear_token(usuario_id, TIPO_REFRESH)
+    return crear_token(usuario_id, TIPO_REFRESH, version)
 
 
-def decodificar_token(token: str, tipo: str = TIPO_ACCESS) -> int:
-    """Devuelve el id de usuario o lanza 401 si el token no es válido.
+def decodificar_token(token: str, tipo: str = TIPO_ACCESS) -> tuple[int, int]:
+    """Devuelve ``(id de usuario, versión de token)`` o lanza 401.
 
     Además comprueba que el token sea del ``tipo`` esperado: un refresh token
-    no sirve como access token (ni al revés). Los tokens antiguos, sin el
-    claim ``tipo``, se tratan como access.
+    no sirve como access token (ni al revés). Los tokens antiguos, sin los
+    claims ``tipo`` ni ``ver``, se tratan como access de versión 0.
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if payload.get("tipo", TIPO_ACCESS) != tipo:
             raise jwt.InvalidTokenError("tipo de token no válido")
-        return int(payload["sub"])
+        return int(payload["sub"]), int(payload.get("ver", 0))
     except (jwt.PyJWTError, KeyError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -95,6 +100,16 @@ def decodificar_token(token: str, tipo: str = TIPO_ACCESS) -> int:
 # ---------------------------------------------------------------------------
 # Dependencias de FastAPI
 # ---------------------------------------------------------------------------
+def _exigir_version(usuario: Usuario, version: int) -> None:
+    """Rechaza los tokens emitidos antes del último cambio de contraseña."""
+    if usuario.token_version != version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sesión invalidada: cambió la contraseña, vuelve a iniciar sesión",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
 def usuario_actual(
     credenciales: HTTPAuthorizationCredentials | None = Depends(esquema_bearer),
     db: Session = Depends(get_db),
@@ -107,25 +122,29 @@ def usuario_actual(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    usuario = db.get(Usuario, decodificar_token(credenciales.credentials))
+    usuario_id, version = decodificar_token(credenciales.credentials)
+    usuario = db.get(Usuario, usuario_id)
     if usuario is None or not usuario.activo:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="El usuario del token no existe o está desactivado",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    _exigir_version(usuario, version)
     return usuario
 
 
 def usuario_del_refresh(token: str, db: Session) -> Usuario:
     """Valida un refresh token y devuelve su usuario (o lanza 401)."""
-    usuario = db.get(Usuario, decodificar_token(token, TIPO_REFRESH))
+    usuario_id, version = decodificar_token(token, TIPO_REFRESH)
+    usuario = db.get(Usuario, usuario_id)
     if usuario is None or not usuario.activo:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token de una cuenta inexistente o desactivada",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    _exigir_version(usuario, version)
     return usuario
 
 

@@ -1,12 +1,14 @@
-"""Endpoints de autenticación: registro, login y usuario actual (JWT)."""
+"""Endpoints de autenticación: registro, login, contraseña y cuentas (JWT)."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import ROL_ADMIN, Usuario
+from app.models import ROL_ADMIN, ItemColeccion, Usuario
 from app.schemas import (
     PaginaUsuarios,
+    PasswordCambio,
+    PasswordRestablecer,
     RolActualizar,
     TokenRefresco,
     TokenSalida,
@@ -31,8 +33,9 @@ router = APIRouter(prefix="/api/auth", tags=["0. Autenticación"])
 
 # ---------------------------------------------------------------------------
 # Usuarios: listado y búsqueda para admin y gestor; los roles solo los
-# cambia un admin. Se sirve bajo /api/usuarios, pero agrupado aquí porque es
-# parte de las cuentas, igual que el registro y el login.
+# cambia un admin, y solo un admin puede borrar cuentas o restablecer
+# contraseñas ajenas. Se sirve bajo /api/usuarios, pero agrupado aquí porque
+# es parte de las cuentas, igual que el registro y el login.
 # ---------------------------------------------------------------------------
 router_usuarios = APIRouter(prefix="/api/usuarios", tags=["7. Usuarios"])
 
@@ -137,11 +140,111 @@ def cambiar_rol(
     return usuario
 
 
+@router_usuarios.patch(
+    "/{usuario_id}/password",
+    response_model=UsuarioSalida,
+    summary="Restablecer la contraseña de una cuenta (solo admin)",
+)
+def restablecer_password(
+    usuario_id: int,
+    datos: PasswordRestablecer,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(requiere_admin),
+):
+    """Proceso de recuperación de cuenta: el admin pone una contraseña nueva.
+
+    No hace falta conocer la anterior (por eso solo lo puede hacer un
+    administrador y no un gestor). Al guardarla se incrementa la versión de
+    token de la cuenta, de modo que los JWT emitidos hasta ese momento —
+    incluidos los de quien suplantaba o secuestró la sesión— dejan de servir.
+
+    El admin se cambia su propia contraseña por el flujo dedicado
+    ``POST /api/auth/cambiar-password``, que exige la actual.
+    """
+    if usuario_id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Para tu propia contraseña usa POST /api/auth/cambiar-password "
+                "(necesitas conocer la actual)"
+            ),
+        )
+
+    usuario = db.get(Usuario, usuario_id)
+    if usuario is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"La cuenta con id {usuario_id} no existe",
+        )
+
+    usuario.password_hash = hash_password(datos.password_nueva)
+    usuario.token_version += 1
+    db.commit()
+    db.refresh(usuario)
+    return usuario
+
+
+@router_usuarios.delete(
+    "/{usuario_id}",
+    summary="Eliminar una cuenta y su colección (solo admin)",
+)
+def eliminar_usuario(
+    usuario_id: int,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(requiere_admin),
+):
+    """Borra la cuenta y, en cascada, los ejemplares de su colección.
+
+    Dos reglas que hacen que siempre tenga sentido:
+    un admin no puede eliminarse a sí mismo (evita bloquearse la salida y
+    perder el último administrador —como quien ejecuta la acción es admin y
+    sobrevive, siempre queda al menos uno—), y la operación es exclusiva de
+    administradores: los gestores solo consultan cuentas.
+    """
+    if usuario_id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes eliminar tu propia cuenta",
+        )
+
+    usuario = db.get(Usuario, usuario_id)
+    if usuario is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"La cuenta con id {usuario_id} no existe",
+        )
+
+    ejemplares = (
+        db.scalar(
+            select(func.count())
+            .select_from(ItemColeccion)
+            .where(ItemColeccion.usuario_id == usuario_id)
+        )
+        or 0
+    )
+
+    db.delete(usuario)  # la relación y la FK CASCADE arrastran su colección
+    db.commit()
+    return {
+        "mensaje": (
+            f"Cuenta de {usuario.email} eliminada junto con "
+            f"{ejemplares} ejemplar(es) de su colección"
+        ),
+        "id": usuario_id,
+        "ejemplares_eliminados": ejemplares,
+    }
+
+
 def _respuesta_token(usuario: Usuario) -> TokenSalida:
-    """Emite el par de tokens: access corto + refresh largo (rotación)."""
+    """Emite el par de tokens: access corto + refresh largo (rotación).
+
+    Llevan la ``token_version`` vigente: si la cuenta cambia de contraseña,
+    los pares anteriores quedan anulados.
+    """
+    version = usuario.token_version
     return TokenSalida(
-        access_token=crear_token(usuario.id),
-        refresh_token=crear_refresh_token(usuario.id),
+        access_token=crear_token(usuario.id, version=version),
+        refresh_token=crear_refresh_token(usuario.id, version=version),
         token_type="bearer",
         expira_en_segundos=MINUTOS_TOKEN * 60,
         refresh_expira_en_segundos=MINUTOS_REFRESH * 60,
@@ -214,6 +317,39 @@ def refrescar_token(datos: TokenRefresco, db: Session = Depends(get_db)):
     """
     # Lanza 401 si el token es de otro tipo, está caducado o no es válido.
     usuario = usuario_del_refresh(datos.refresh_token, db)
+    return _respuesta_token(usuario)
+
+
+@router.post(
+    "/cambiar-password",
+    response_model=TokenSalida,
+    summary="Cambiar mi propia contraseña (cualquier rol)",
+)
+def cambiar_password(
+    datos: PasswordCambio,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(usuario_actual),
+):
+    """Cambia la contraseña de la cuenta autenticada.
+
+    Exige la **contraseña actual**: tener un token (posiblemente robado) no
+    basta para quedarte en una cuenta sin conocer su clave. Como medida de
+    higiene, al guardar la nueva se incrementa la ``token_version``: todos
+    los tokens emitidos hasta ese momento —otras sesiones abiertas, refresh
+    caducados reutilizables— dejan de ser válidos. La respuesta devuelve un
+    par de tokens nuevo, así que quien ha cambiado la contraseña sigue
+    dentro sin volver a entrar y el resto de sesiones queda fuera.
+    """
+    if not verificar_password(datos.password_actual, usuario.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña actual no es correcta",
+        )
+
+    usuario.password_hash = hash_password(datos.password_nueva)
+    usuario.token_version += 1
+    db.commit()
+    db.refresh(usuario)
     return _respuesta_token(usuario)
 
 

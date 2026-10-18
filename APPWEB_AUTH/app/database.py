@@ -188,11 +188,14 @@ def _quitar_es_admin(conn) -> None:
 
 
 def migrar_usuarios() -> bool:
-    """Adapta la tabla ``usuarios`` al sistema de roles.
+    """Adapta la tabla ``usuarios`` a los roles y al control de sesiones.
 
     Antes de los roles, ``usuarios`` tenía un booleano ``es_admin``. Esta
     migración añade la columna ``rol`` (con valor por defecto ``"usuario"``)
     y asciende a ``admin`` las cuentas que tuvieran ``es_admin = 1``.
+
+    También añade ``token_version``, la versión de los JWT: se incrementa en
+    cada cambio de contraseña para anular los tokens emitidos con anterioridad.
 
     Está pensada para poder reanudarse: si la columna ya existe, no vuelve a
     añadirla. Devuelve ``True`` si hubo que tocar la base de datos.
@@ -230,6 +233,15 @@ def migrar_usuarios() -> bool:
             # El modelo ya no usa es_admin y la antigua columna era NOT NULL
             # sin valor por defecto: si se queda, rompe los registros nuevos.
             _quitar_es_admin(conn)
+            hubo_cambios = True
+
+        # Versión de token: se añade después de la reconstrucción anterior
+        # (que recrea la tabla a mano sin esta columna) y solo si falta.
+        if "token_version" not in columnas:
+            conn.exec_driver_sql(
+                "ALTER TABLE usuarios ADD COLUMN token_version INTEGER "
+                "NOT NULL DEFAULT 0"
+            )
             hubo_cambios = True
 
         if hubo_cambios:

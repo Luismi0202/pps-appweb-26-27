@@ -48,11 +48,14 @@ app = FastAPI(
         "(esquema `Bearer`).\n"
         "   Esa respuesta trae dos tokens: un **access token** corto y un "
         "**refresh token** largo. Cuando el access caduca, renueva la sesión "
-        "sin contraseña en `POST /api/auth/refresh`.\n\n"
+        "sin contraseña en `POST /api/auth/refresh`. Tu contraseña la cambias "
+        "en `POST /api/auth/cambiar-password` (pide la actual y anula las "
+        "demás sesiones abiertas).\n\n"
         "**Roles:** cada cuenta tiene un rol. `usuario` (por defecto) solo "
         "gestiona su propia colección; `gestor` además edita el catálogo "
         "(videojuegos, plataformas, géneros y desarrolladoras) y consulta las "
-        "cuentas; `admin` además asigna los roles.\n\n"
+        "cuentas; `admin` además asigna los roles, restablece contraseñas y "
+        "elimina cuentas.\n\n"
         "**Apartados:**\n"
         "1. **Videojuegos** — CRUD con carátula, descripción, filtros y paginación\n"
         "2. **Plataformas** — CRUD\n"
@@ -60,11 +63,12 @@ app = FastAPI(
         "4. **Desarrolladoras** — CRUD\n"
         "5. **Colección** — tus ejemplares: estado, precio, valoración y favoritos\n"
         "6. **Estadísticas** — resúmenes y conteos de tu colección\n"
-        "7. **Usuarios** — consultar cuentas (admin y gestor) y cambiar roles (solo admin)\n\n"
+        "7. **Usuarios** — consultar cuentas (admin y gestor); cambiar roles, "
+        "restablecer contraseñas y eliminar cuentas (solo admin)\n\n"
         "Todos los endpoints (salvo auth y `/`) requieren el token JWT.\n"
         "CORS abierto: puedes llamarla desde cualquier página web (fetch/axios)."
     ),
-    version="2.1.0",
+    version="2.2.0",
     lifespan=lifespan,
     contact={"name": "API Colección de Videojuegos"},
 )
@@ -100,7 +104,7 @@ app.mount(
 def raiz():
     return {
         "mensaje": "API Colección de Videojuegos",
-        "version": "2.1.0",
+        "version": "2.2.0",
         "documentacion_interactiva": "/docs",
         "openapi": "/openapi.json",
         "panel_web": "/panel",
@@ -108,6 +112,7 @@ def raiz():
             "registro": "POST /api/auth/registro",
             "login": "POST /api/auth/login",
             "refrescar_token": "POST /api/auth/refresh",
+            "cambiar_password": "POST /api/auth/cambiar-password",
             "usuario_actual": "GET /api/auth/yo",
         },
         "apartados": {
