@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FBF5EC">
+  <title>Ludoteca · Mi colección de videojuegos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Fondo animado -->
+  <div class="blobs" aria-hidden="true">
+    <span class="blob b1"></span>
+    <span class="blob b2"></span>
+    <span class="blob b3"></span>
+  </div>
+
+  <!-- Cabecera -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🎮</span>
+      <div class="brand-texto">
+        <h1>Ludoteca</h1>
+        <p>tu colección de videojuegos</p>
+      </div>
+    </div>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab activo" data-tab="catalogo">🗂️ Catálogo</button>
+      <button class="tab" data-tab="coleccion">📚 Mi colección</button>
+      <button class="tab" data-tab="estadisticas">📊 Estadísticas</button>
+      <button class="tab" data-tab="usuarios" id="tab-btn-usuarios" hidden>👥 Usuarios</button>
+    </nav>
+
+    <div class="topbar-acciones">
+      <button class="btn btn-primario" id="btn-nuevo">＋ Nuevo juego</button>
+      <div class="usuario-chip" id="usuario-chip" hidden>
+        <span class="usuario-avatar" id="usuario-avatar">?</span>
+        <span class="usuario-nombre" id="usuario-nombre">—</span>
+        <span class="usuario-rol" id="usuario-rol"></span>
+        <button class="usuario-salir" id="btn-salir" title="Cerrar sesión">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ================= CATÁLOGO ================= -->
+    <section class="tab-panel active" id="tab-catalogo">
+      <div class="hero glass">
+        <div>
+          <h2>Explora el catálogo</h2>
+          <p>Busca por título o descripción y filtra por género, plataforma o estudio.
+             Pulsa cualquier carátula para ver la ficha completa y añadirla a tu colección.</p>
+        </div>
+        <div class="hero-dato">
+          <span class="hero-num" id="contador-catalogo">—</span>
+          <span class="hero-lbl">juegos encontrados</span>
+        </div>
+      </div>
+
+      <div class="filtros glass">
+        <div class="campo campo-buscar">
+          <span class="icono">🔎</span>
+          <input type="search" id="buscar-catalogo" placeholder="Buscar por título o descripción…" autocomplete="off">
+        </div>
+        <div class="campo">
+          <select id="filtro-genero"><option value="">Todos los géneros</option></select>
+        </div>
+        <div class="campo">
+          <select id="filtro-plataforma"><option value="">Todas las plataformas</option></select>
+        </div>
+        <div class="campo">
+          <select id="filtro-desarrolladora"><option value="">Todas las desarrolladoras</option></select>
+        </div>
+        <div class="campo">
+          <select id="filtro-orden">
+            <option value="recientes">Más recientes (añadidos)</option>
+            <option value="titulo-asc">Título A → Z</option>
+            <option value="titulo-desc">Título Z → A</option>
+            <option value="anio-desc">Año ↓</option>
+            <option value="anio-asc">Año ↑</option>
+          </select>
+        </div>
+        <button class="btn btn-fantasma" id="btn-reset" title="Limpiar filtros">✕ Limpiar</button>
+      </div>
+
+      <div class="grid" id="grid-catalogo"></div>
+      <div class="pager" id="pager-catalogo"></div>
+    </section>
+
+    <!-- ================= MI COLECCIÓN ================= -->
+    <section class="tab-panel" id="tab-coleccion">
+      <div class="kpis" id="coleccion-kpis"></div>
+
+      <div class="filtros glass">
+        <div class="campo campo-buscar">
+          <span class="icono">🔎</span>
+          <input type="search" id="buscar-coleccion" placeholder="Buscar en mi colección…" autocomplete="off">
+        </div>
+        <div class="campo">
+          <select id="filtro-estado">
+            <option value="">Todos los estados</option>
+            <option value="nuevo">Nuevo</option>
+            <option value="como nuevo">Como nuevo</option>
+            <option value="bueno">Bueno</option>
+            <option value="aceptable">Aceptable</option>
+            <option value="malo">Malo</option>
+            <option value="digital">Digital</option>
+          </select>
+        </div>
+        <div class="campo">
+          <select id="filtro-orden-coleccion">
+            <option value="fecha-desc">Añadidos recientemente</option>
+            <option value="fecha-asc">Añadidos primero</option>
+            <option value="valoracion-desc">Mejor valorados</option>
+            <option value="precio-desc">Más caros</option>
+            <option value="titulo-asc">Título A → Z</option>
+          </select>
+        </div>
+        <label class="interruptor">
+          <input type="checkbox" id="filtro-fav">
+          <span class="interruptor-pista"><span class="interruptor-bola"></span></span>
+          <span>Solo favoritos ⭐</span>
+        </label>
+      </div>
+
+      <div class="grid" id="grid-coleccion"></div>
+      <div class="pager" id="pager-coleccion"></div>
+    </section>
+
+    <!-- ================= ESTADÍSTICAS ================= -->
+    <section class="tab-panel" id="tab-estadisticas">
+      <div class="kpis" id="stats-resumen"></div>
+      <div class="paneles">
+        <div class="glass panel">
+          <h3>🎯 Juegos por género</h3>
+          <div class="barras" id="chart-generos"></div>
+        </div>
+        <div class="glass panel">
+          <h3>🕹️ Juegos por plataforma</h3>
+          <div class="barras" id="chart-plataformas"></div>
+        </div>
+        <div class="glass panel">
+          <h3>📦 Estado de mi colección</h3>
+          <div class="barras" id="chart-estados"></div>
+        </div>
+        <div class="glass panel">
+          <h3>⭐ Top valoraciones</h3>
+          <ol class="top-lista" id="top-valoraciones"></ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ USUARIOS (admin y gestor; roles solo admin) ============ -->
+    <section class="tab-panel" id="tab-usuarios">
+      <div class="hero glass">
+        <div>
+          <h2>Usuarios de la plataforma</h2>
+          <p>Consulta las cuentas de la plataforma. Los <b>gestores</b> pueden editar
+             el catálogo y los <b>administradores</b> además asignan los roles.</p>
+        </div>
+        <div class="hero-dato">
+          <span class="hero-num" id="contador-usuarios">—</span>
+          <span class="hero-lbl">cuentas</span>
+        </div>
+      </div>
+
+      <div class="filtros glass">
+        <div class="campo campo-buscar">
+          <span class="icono">🔎</span>
+          <input type="search" id="buscar-usuarios" placeholder="Buscar por nombre, email o rol…" autocomplete="off">
+        </div>
+        <div class="campo">
+          <select id="filtro-rol">
+            <option value="">Todos los roles</option>
+            <option value="usuario">Usuario</option>
+            <option value="gestor">Gestor</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="lista-usuarios" id="lista-usuarios"></div>
+      <div class="pager" id="pager-usuarios"></div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <span>Ludoteca se conecta a la API FastAPI · <a id="enlace-docs" href="/docs" target="_blank" rel="noopener">documentación</a></span>
+    <span id="pie-estado" class="punto-estado">comprobando…</span>
+  </footer>
+
+  <!-- Modal: ficha de videojuego -->
+  <div class="modal-fondo" id="modal-detalle" hidden>
+    <div class="modal modal-ancho">
+      <button class="modal-cerrar" data-cerrar aria-label="Cerrar">✕</button>
+      <div class="modal-contenido"></div>
+    </div>
+  </div>
+
+  <!-- Modal: formulario de videojuego -->
+  <div class="modal-fondo" id="modal-form" hidden>
+    <div class="modal modal-ancho">
+      <button class="modal-cerrar" data-cerrar aria-label="Cerrar">✕</button>
+      <div class="modal-contenido"></div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+  <script src="app.js"></script>
+</body>
+</html>

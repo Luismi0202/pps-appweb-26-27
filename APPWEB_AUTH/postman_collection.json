@@ -1,0 +1,775 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "name": "API Colección de Videojuegos",
+    "description": "Colección completa para probar la API de colección de videojuegos.\n\n**Autenticación (JWT)**: ejecuta primero «0. Autenticación → Iniciar sesión». El login guarda dos tokens: `token` (access, caduca a las 8 h) y `refresh_token` (para renovar la sesión con «0. Autenticación → Renovar token (refresh)» cuando responda 401). Todas las peticiones usan el access como auth Bearer a nivel de colección.\n\n0. Autenticación (registro + login + refresh)\n1. Videojuegos (CRUD + filtros + paginación)\n2. Plataformas (CRUD)\n3. Géneros (CRUD)\n4. Desarrolladoras (CRUD)\n5. Colección personal (CRUD + favoritos)\n6. Estadísticas\n7. Usuarios (admin y gestor)\n\n**Roles**: `usuario` (por defecto) solo gestiona su propia colección; `gestor` además edita el catálogo (videojuegos, plataformas, géneros y desarrolladoras) y consulta las cuentas; `admin` además asigna los roles. Escribir en el catálogo y consultar `/api/usuarios` requiere `gestor` o `admin`; cambiar roles requiere `admin`.\n\nCuenta de ejemplo: `admin@ludoteca.local` / `admin123`\n\nRecuerda arrancar el servidor: `python -m uvicorn app.main:app --port 8000`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Autenticación",
+      "item": [
+        {
+          "name": "Registrar cuenta",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Maic\",\n  \"email\": \"maic@ejemplo.com\",\n  \"password\": \"secreto123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/registro",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "registro"]
+            },
+            "description": "Crea una cuenta y devuelve un token JWT (inicia sesión automáticamente). El email debe ser único."
+          }
+        },
+        {
+          "name": "Iniciar sesión (guarda el token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data && data.access_token) {",
+                  "    pm.collectionVariables.set('token', data.access_token);",
+                  "    console.log('Token JWT guardado en la variable token');",
+                  "} else {",
+                  "    console.error('No se recibió access_token');",
+                  "}",
+                  "if (data && data.refresh_token) {",
+                  "    pm.collectionVariables.set('refresh_token', data.refresh_token);",
+                  "    console.log('Refresh token guardado en la variable refresh_token');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@ludoteca.local\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Devuelve dos tokens: el access (variable {{token}}) y el refresh (variable {{refresh_token}}), que se usan en el resto de peticiones y en la renovación de sesión."
+          }
+        },
+        {
+          "name": "Renovar token (refresh)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (pm.response.code === 200 && data.access_token) {",
+                  "    pm.collectionVariables.set('token', data.access_token);",
+                  "    if (data.refresh_token) {",
+                  "        pm.collectionVariables.set('refresh_token', data.refresh_token);",
+                  "    }",
+                  "    console.log('Par de tokens renovado (rotación)');",
+                  "} else {",
+                  "    console.error('No se pudo renovar la sesión: ' + JSON.stringify(data));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Renueva la sesión sin volver a escribir la contraseña: cambia el refresh_token por un par nuevo de tokens y lo guarda en {{token}} y {{refresh_token}}. Útil cuando el access ha caducado y la API responde 401."
+          }
+        },
+        {
+          "name": "Usuario autenticado (yo)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/auth/yo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "yo"]
+            },
+            "description": "Datos del usuario del token. Sirve para comprobar que el token es válido."
+          }
+        }
+      ]
+    },
+    {
+      "name": "General",
+      "item": [
+        {
+          "name": "Información de la API",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "Índice con todos los apartados de la API."
+          }
+        },
+        {
+          "name": "Salud (health check)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/salud",
+              "host": ["{{base_url}}"],
+              "path": ["api", "salud"]
+            }
+          }
+        },
+        {
+          "name": "Documentación interactiva (Swagger)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/docs",
+              "host": ["{{base_url}}"],
+              "path": ["docs"]
+            },
+            "description": "Abre la interfaz interactiva de FastAPI en el navegador."
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Videojuegos",
+      "item": [
+        {
+          "name": "Listar videojuegos",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/videojuegos?pagina=1&por_pagina=10&orden=titulo-asc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "videojuegos"],
+              "query": [
+                { "key": "pagina", "value": "1" },
+                { "key": "por_pagina", "value": "10" },
+                { "key": "orden", "value": "titulo-asc", "description": "titulo-asc | titulo-desc | anio-asc | anio-desc | recientes" }
+              ]
+            },
+            "description": "Listado paginado. Devuelve carátula, descripción, géneros y plataformas de cada juego."
+          }
+        },
+        {
+          "name": "Buscar con filtros (q, género, plataforma, rango de años)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/videojuegos?q=&genero=RPG&plataforma=PC&anio_desde=2015&orden=anio-desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "videojuegos"],
+              "query": [
+                { "key": "q", "value": "", "description": "Texto libre: busca en título y descripción (ej. 'zelda')" },
+                { "key": "genero", "value": "RPG", "description": "ID o nombre del género" },
+                { "key": "plataforma", "value": "PC", "description": "ID o nombre de la plataforma" },
+                { "key": "desarrolladora", "value": "", "description": "ID o nombre de la desarrolladora" },
+                { "key": "anio_desde", "value": "2015" },
+                { "key": "anio_hasta", "value": "" },
+                { "key": "orden", "value": "anio-desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener videojuego por ID (detalle)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/videojuegos/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "videojuegos", "1"]
+            },
+            "description": "Devuelve la ficha completa: carátula, descripción, desarrolladora, plataformas y géneros."
+          }
+        },
+        {
+          "name": "Crear videojuego",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Metroid Dread\",\n  \"descripcion\": \"Samus Aran persigue a los titanes M.M. en el planeta ZDR en este frenético metroidvania en 2D.\",\n  \"caratula_url\": \"https://placehold.co/600x800?text=Metroid+Dread\",\n  \"anio_lanzamiento\": 2021,\n  \"clasificacion\": \"PEGI 12\",\n  \"puntuacion\": 8.8,\n  \"desarrolladora_id\": 2,\n  \"plataformas_ids\": [5],\n  \"generos_ids\": [1, 5]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/videojuegos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "videojuegos"]
+            },
+            "description": "plataformas_ids y generos_ids son listas de IDs. Usa GET /api/plataformas y GET /api/generos para verlos."
+          }
+        },
+        {
+          "name": "Actualizar videojuego (parcial)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"puntuacion\": 9.0,\n  \"clasificacion\": \"PEGI 16\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/videojuegos/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "videojuegos", "1"]
+            },
+            "description": "Solo se actualizan los campos enviados."
+          }
+        },
+        {
+          "name": "Eliminar videojuego",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/videojuegos/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "videojuegos", "1"]
+            },
+            "description": "También elimina sus ejemplares de la colección."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Plataformas",
+      "item": [
+        {
+          "name": "Listar plataformas",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/plataformas",
+              "host": ["{{base_url}}"],
+              "path": ["api", "plataformas"]
+            }
+          }
+        },
+        {
+          "name": "Obtener plataforma por ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/plataformas/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "plataformas", "1"]
+            }
+          }
+        },
+        {
+          "name": "Crear plataforma",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"PlayStation 6\",\n  \"fabricante\": \"Sony\",\n  \"anio_lanzamiento\": 2027\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/plataformas",
+              "host": ["{{base_url}}"],
+              "path": ["api", "plataformas"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar plataforma",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fabricante\": \"Sony Interactive Entertainment\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/plataformas/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "plataformas", "1"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar plataforma",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/plataformas/99",
+              "host": ["{{base_url}}"],
+              "path": ["api", "plataformas", "99"]
+            },
+            "description": "Devuelve 409 si la plataforma está en uso. Usa un ID sin uso."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Géneros",
+      "item": [
+        {
+          "name": "Listar géneros",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/generos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "generos"]
+            }
+          }
+        },
+        {
+          "name": "Obtener género por ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/generos/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "generos", "1"]
+            }
+          }
+        },
+        {
+          "name": "Crear género",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Roguelike\",\n  \"descripcion\": \"Partidas procedurales donde la muerte es parte del progreso.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/generos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "generos"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar género",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion\": \"Partidas procedurales con muerte permanente y mejora entre intentos.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/generos/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "generos", "1"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar género",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/generos/99",
+              "host": ["{{base_url}}"],
+              "path": ["api", "generos", "99"]
+            },
+            "description": "Devuelve 409 si el género está asignado a algún juego."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Desarrolladoras",
+      "item": [
+        {
+          "name": "Listar desarrolladoras",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/desarrolladoras",
+              "host": ["{{base_url}}"],
+              "path": ["api", "desarrolladoras"]
+            }
+          }
+        },
+        {
+          "name": "Obtener desarrolladora por ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/desarrolladoras/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "desarrolladoras", "1"]
+            }
+          }
+        },
+        {
+          "name": "Crear desarrolladora",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Larian Studios\",\n  \"pais\": \"Bélgica\",\n  \"web\": \"https://larian.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/desarrolladoras",
+              "host": ["{{base_url}}"],
+              "path": ["api", "desarrolladoras"]
+            }
+          }
+        },
+        {
+          "name": "Actualizar desarrolladora",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pais\": \"Bélgica (Gante)\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/desarrolladoras/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "desarrolladoras", "1"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar desarrolladora",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/desarrolladoras/99",
+              "host": ["{{base_url}}"],
+              "path": ["api", "desarrolladoras", "99"]
+            },
+            "description": "Devuelve 409 si tiene videojuegos asociados."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Colección",
+      "item": [
+        {
+          "name": "Listar mi colección",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/colecciones?pagina=1&por_pagina=10&orden=fecha-desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "colecciones"],
+              "query": [
+                { "key": "pagina", "value": "1" },
+                { "key": "por_pagina", "value": "10" },
+                { "key": "orden", "value": "fecha-desc", "description": "fecha-desc | fecha-asc | valoracion-desc | precio-desc | titulo-asc" }
+              ]
+            },
+            "description": "Cada ejemplar incluye su videojuego completo (carátula y descripción incluidas)."
+          }
+        },
+        {
+          "name": "Filtrar solo favoritos",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/colecciones?favorito=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "colecciones"],
+              "query": [
+                { "key": "favorito", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filtrar por estado y valoración mínima",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/colecciones?estado=digital&valoracion_min=9",
+              "host": ["{{base_url}}"],
+              "path": ["api", "colecciones"],
+              "query": [
+                { "key": "estado", "value": "digital", "description": "nuevo | como nuevo | bueno | aceptable | malo | digital" },
+                { "key": "valoracion_min", "value": "9" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener ejemplar por ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/colecciones/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "colecciones", "1"]
+            }
+          }
+        },
+        {
+          "name": "Añadir juego a la colección",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videojuego_id\": 3,\n  \"plataforma_id\": 5,\n  \"estado\": \"bueno\",\n  \"fecha_compra\": \"2024-05-17\",\n  \"precio_compra\": 24.99,\n  \"valoracion\": 9,\n  \"favorito\": false,\n  \"notas\": \"Cartucho de segunda mano.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/colecciones",
+              "host": ["{{base_url}}"],
+              "path": ["api", "colecciones"]
+            },
+            "description": "No admite duplicados: mismo juego + misma plataforma devuelve 409."
+          }
+        },
+        {
+          "name": "Actualizar ejemplar (parcial)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valoracion\": 10,\n  \"estado\": \"como nuevo\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/colecciones/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "colecciones", "1"]
+            }
+          }
+        },
+        {
+          "name": "Marcar como favorito",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"favorito\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/colecciones/1/favorito",
+              "host": ["{{base_url}}"],
+              "path": ["api", "colecciones", "1", "favorito"]
+            }
+          }
+        },
+        {
+          "name": "Eliminar ejemplar",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/colecciones/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "colecciones", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Estadísticas",
+      "item": [
+        {
+          "name": "Resumen general",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/estadisticas/resumen",
+              "host": ["{{base_url}}"],
+              "path": ["api", "estadisticas", "resumen"]
+            },
+            "description": "Totales, favoritos, valoración media e inversión total."
+          }
+        },
+        {
+          "name": "Por plataforma",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/estadisticas/por-plataforma",
+              "host": ["{{base_url}}"],
+              "path": ["api", "estadisticas", "por-plataforma"]
+            }
+          }
+        },
+        {
+          "name": "Por género",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/estadisticas/por-genero",
+              "host": ["{{base_url}}"],
+              "path": ["api", "estadisticas", "por-genero"]
+            }
+          }
+        },
+        {
+          "name": "Por estado",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/estadisticas/por-estado",
+              "host": ["{{base_url}}"],
+              "path": ["api", "estadisticas", "por-estado"]
+            }
+          }
+        },
+        {
+          "name": "Top 10 valoraciones",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/estadisticas/top-valoraciones",
+              "host": ["{{base_url}}"],
+              "path": ["api", "estadisticas", "top-valoraciones"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Usuarios (admin y gestor)",
+      "item": [
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/usuarios?pagina=1&por_pagina=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios"],
+              "query": [
+                { "key": "pagina", "value": "1" },
+                { "key": "por_pagina", "value": "10" }
+              ]
+            },
+            "description": "Listado paginado de cuentas. Requiere rol admin o gestor."
+          }
+        },
+        {
+          "name": "Buscar usuarios (nombre, email o rol)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/usuarios?q=&rol=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios"],
+              "query": [
+                { "key": "q", "value": "", "description": "Texto libre: nombre o email (ej. 'admin')" },
+                { "key": "rol", "value": "", "description": "usuario | gestor | admin" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener usuario por ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/2",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "2"]
+            }
+          }
+        },
+        {
+          "name": "Cambiar rol de un usuario",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rol\": \"gestor\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/2/rol",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "2", "rol"]
+            },
+            "description": "Valores: usuario | gestor | admin. Devuelve 400 si intentas cambiarte tu propio rol y 409 si quitas el último admin."
+          }
+        }
+      ]
+    }
+  ]
+}

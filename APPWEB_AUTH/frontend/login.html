@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FBF5EC">
+  <title>Entrar · Ludoteca</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="auth-body">
+  <!-- Fondo animado -->
+  <div class="blobs" aria-hidden="true">
+    <span class="blob b1"></span>
+    <span class="blob b2"></span>
+    <span class="blob b3"></span>
+  </div>
+
+  <main class="auth-envoltorio">
+    <section class="auth-card glass">
+      <!-- Lado decorativo -->
+      <aside class="auth-lado">
+        <div class="auth-lado-contenido">
+          <span class="auth-logo">🎮</span>
+          <h1 class="auth-marca">Ludoteca</h1>
+          <p class="auth-claim">Tu colección de videojuegos, ordenada y con estilo.</p>
+          <ul class="auth-puntos">
+            <li><span>🗂️</span> Explora el catálogo completo</li>
+            <li><span>📚</span> Guarda tus juegos y valóralos</li>
+            <li><span>📊</span> Consulta tus estadísticas</li>
+          </ul>
+        </div>
+        <div class="auth-lado-brillo" aria-hidden="true"></div>
+      </aside>
+
+      <!-- Lado del formulario -->
+      <div class="auth-form-lado">
+        <div class="auth-tabs" role="tablist">
+          <button class="auth-tab activo" id="tab-login" data-vista="login" role="tab">Iniciar sesión</button>
+          <button class="auth-tab" id="tab-registro" data-vista="registro" role="tab">Crear cuenta</button>
+        </div>
+
+        <!-- Formulario: iniciar sesión -->
+        <form class="auth-form" id="form-login" novalidate>
+          <h2>¡Hola de nuevo! 👋</h2>
+          <p class="auth-sub">Entra para continuar con tu colección.</p>
+
+          <label class="auth-campo">
+            <span>Email</span>
+            <input type="email" name="email" autocomplete="username"
+                   placeholder="tucorreo@ejemplo.com" required>
+          </label>
+
+          <label class="auth-campo">
+            <span>Contraseña</span>
+            <span class="auth-input-con-pico">
+              <input type="password" name="password" autocomplete="current-password"
+                     placeholder="••••••••" required>
+              <button type="button" class="auth-ojo" data-ver title="Mostrar contraseña">👁</button>
+            </span>
+          </label>
+
+          <button type="submit" class="btn btn-primario auth-enviar">Entrar</button>
+          <p class="auth-pie-texto">
+            ¿No tienes cuenta?
+            <a href="#" data-ir="registro">Regístrate gratis</a>
+          </p>
+        </form>
+
+        <!-- Formulario: crear cuenta -->
+        <form class="auth-form" id="form-registro" novalidate hidden>
+          <h2>Crea tu cuenta ✨</h2>
+          <p class="auth-sub">Tardas menos que en instalar un juego.</p>
+
+          <label class="auth-campo">
+            <span>Nombre</span>
+            <input type="text" name="nombre" autocomplete="nickname"
+                   placeholder="¿Cómo te llamas?" maxlength="50" required>
+          </label>
+
+          <label class="auth-campo">
+            <span>Email</span>
+            <input type="email" name="email" autocomplete="username"
+                   placeholder="tucorreo@ejemplo.com" required>
+          </label>
+
+          <label class="auth-campo">
+            <span>Contraseña</span>
+            <span class="auth-input-con-pico">
+              <input type="password" name="password" autocomplete="new-password"
+                     placeholder="Mínimo 6 caracteres" minlength="6" maxlength="72" required>
+              <button type="button" class="auth-ojo" data-ver title="Mostrar contraseña">👁</button>
+            </span>
+          </label>
+
+          <button type="submit" class="btn btn-primario auth-enviar">Crear cuenta</button>
+          <p class="auth-pie-texto">
+            ¿Ya tienes cuenta?
+            <a href="#" data-ir="login">Inicia sesión</a>
+          </p>
+        </form>
+
+        <p class="auth-aviso" id="auth-aviso" hidden></p>
+      </div>
+    </section>
+
+    <p class="auth-volver">
+      <a id="enlace-docs" href="/docs" target="_blank" rel="noopener">Ver la API</a>
+      · Ludoteca se conecta a la API FastAPI
+    </p>
+  </main>
+
+  <div class="toasts" id="toasts"></div>
+  <script src="auth.js"></script>
+</body>
+</html>
