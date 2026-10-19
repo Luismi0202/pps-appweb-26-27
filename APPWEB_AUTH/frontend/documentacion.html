@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FBF5EC">
+  <title>Documentación · API Colección de Videojuegos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Fondo animado -->
+  <div class="blobs" aria-hidden="true">
+    <span class="blob b1"></span>
+    <span class="blob b2"></span>
+    <span class="blob b3"></span>
+  </div>
+
+  <!-- Cabecera -->
+  <header class="doc-topbar">
+    <div class="brand">
+      <span class="logo">🎮</span>
+      <div class="brand-texto">
+        <h1>Ludoteca</h1>
+        <p>documentación de la API</p>
+      </div>
+    </div>
+    <nav class="doc-nav">
+      <a href="documentacion.html" class="doc-nav-activo">📚 Documentación</a>
+      <a href="api.html">🔌 Todos los endpoints</a>
+      <a href="index.html">🏠 Volver al panel</a>
+    </nav>
+  </header>
+
+  <main class="doc-envoltorio">
+    <!-- Hero -->
+    <section class="glass doc-hero">
+      <h1>Documentación de la API <span class="doc-version">v2.2.0</span></h1>
+      <p>Backend REST para gestionar una colección de videojuegos: catálogo, colección
+         personal, estadísticas y cuentas de usuario. Construida con <b>FastAPI</b> y
+         SQLite, autenticada con <b>JWT</b> y con CORS abierto: puedes llamarla desde
+         cualquier página web, Postman, curl o el lenguaje que prefieras.</p>
+      <div class="doc-hero-acciones">
+        <a class="btn btn-primario" href="api.html">🔌 Ver todos los endpoints</a>
+        <a class="btn" href="#" data-enlace-swagger="/docs" target="_blank" rel="noopener">⚡ Swagger interactivo</a>
+        <a class="btn btn-fantasma" href="#" data-enlace-swagger="/redoc" target="_blank" rel="noopener">📖 ReDoc</a>
+        <a class="btn btn-fantasma" href="login.html">🔑 Entrar en el panel</a>
+      </div>
+    </section>
+
+    <div class="doc-cuerpo">
+      <!-- Índice lateral -->
+      <aside class="glass doc-indice">
+        <h3>En esta página</h3>
+        <ul>
+          <li><a href="#intro">Introducción</a></li>
+          <li><a href="#auth">Autenticación (JWT)</a></li>
+          <li><a href="#roles">Roles y permisos</a></li>
+          <li><a href="#primeros-pasos">Primeros pasos</a></li>
+          <li><a href="#paginacion">Paginación y filtros</a></li>
+          <li><a href="#estructuras">Estructuras de datos</a></li>
+          <li><a href="#errores">Códigos de estado</a></li>
+          <li><a href="#ejemplos">Ejemplos con fetch</a></li>
+          <li><a href="#enlaces">Enlaces útiles</a></li>
+        </ul>
+      </aside>
+
+      <div class="doc-contenido">
+        <!-- ============ INTRODUCCIÓN ============ -->
+        <section class="glass doc-seccion" id="intro">
+          <h2>📘 Introducción</h2>
+          <p class="doc-lead">Qué es la API y cómo está organizada.</p>
+
+          <p>La <b>API Colección de Videojuegos</b> es un servicio REST que expone
+             todos los datos de una ludoteca: un <b>catálogo compartido</b> de
+             videojuegos, plataformas, géneros y desarrolladoras, y la
+             <b>colección personal</b> de cada usuario (sus ejemplares, con estado,
+             precio de compra, valoración y favoritos).</p>
+
+          <p>Todo se comunica en <b>JSON</b> sobre HTTP, usa los verbos estándar
+             (<code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>PATCH</code>,
+             <code>DELETE</code>) y sigue unos códigos de estado convencionales.</p>
+
+          <h3>Base URL</h3>
+          <span class="codigo">http://localhost:8000</span>
+          <p>Si sirves la API en otro host o puerto, sustitúyelo. Todas las rutas de
+             esta documentación son relativas a esa base (por ejemplo,
+             <code>/api/videojuegos</code> → <code>http://localhost:8000/api/videojuegos</code>).</p>
+
+          <h3>Apartados de la API</h3>
+          <div class="doc-tarjetas">
+            <div class="doc-tarjeta"><b>🔐 Autenticación</b><span>Registro, login, refresco de token y cambio de contraseña.</span></div>
+            <div class="doc-tarjeta"><b>🕹️ Videojuegos</b><span>El catálogo: CRUD con carátula, filtros y paginación.</span></div>
+            <div class="doc-tarjeta"><b>💾 Plataformas</b><span>Consolas y sistemas donde salen los juegos.</span></div>
+            <div class="doc-tarjeta"><b>🎭 Géneros</b><span>RPG, acción, aventura… etiquetas del catálogo.</span></div>
+            <div class="doc-tarjeta"><b>🏢 Desarrolladoras</b><span>Estudios y editoras, con país y web.</span></div>
+            <div class="doc-tarjeta"><b>📚 Colección</b><span>Tus ejemplares: estado, precio, valoración y favoritos.</span></div>
+            <div class="doc-tarjeta"><b>📊 Estadísticas</b><span>Resúmenes y conteos de tu colección.</span></div>
+            <div class="doc-tarjeta"><b>👥 Usuarios</b><span>Cuentas de la plataforma: roles y administración.</span></div>
+          </div>
+
+          <div class="nota-doc">
+            <span>💡</span>
+            <span>La lista completa de <b>peticiones, parámetros y cuerpos JSON</b> está en la
+            página <a href="api.html">Todos los endpoints</a>. Esta guía explica el «cómo»;
+            aquella, el «qué».</span>
+          </div>
+        </section>
+
+        <!-- ============ AUTENTICACIÓN ============ -->
+        <section class="glass doc-seccion" id="auth">
+          <h2>🔐 Autenticación (JWT)</h2>
+          <p class="doc-lead">Todos los endpoints la requieren salvo el registro, el login,
+             el refresco, la raíz <code>/</code>, <code>/api/salud</code> y
+             <code>/api/estadisticas/por-genero</code>.</p>
+
+          <p>La API usa tokens <b>JWT firmados con HMAC SHA-256</b> en el esquema
+             <code>Bearer</code>. Al registrarte o iniciar sesión recibes <b>dos tokens</b>:</p>
+
+          <ul>
+            <li><b>Access token</b> — corto, dura <b>8 horas</b> (28 800 segundos). Es el que
+                envías en cada petición.</li>
+            <li><b>Refresh token</b> — largo, dura <b>7 días</b> (604 800 segundos). Solo sirve
+                para renovar la sesión en <code>POST /api/auth/refresh</code> sin volver a
+                introducir la contraseña.</li>
+          </ul>
+
+          <h3>Cómo enviar el token</h3>
+          <p>Añade la cabecera <code>Authorization</code> con el valor
+             <code>Bearer</code> seguido del access token:</p>
+          <span class="codigo">Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6...
+Content-Type: application/json</span>
+
+          <h3>Renovar la sesión (refresh)</h3>
+          <p>Cuando el access token caduca (respondrá <code>401</code>), envía el refresh
+             token a <code>POST /api/auth/refresh</code>. Devuelve un <b>par nuevo</b> de
+             tokens y el refresh anterior deja de servir (rotación): guarda siempre el
+             último par que recibas.</p>
+
+          <h3>Seguridad adicional</h3>
+          <ul>
+            <li>Las contraseñas se guardan con <b>bcrypt</b>, nunca en claro.</li>
+            <li>Cada cuenta tiene una <b>versión de token</b>: al cambiar la contraseña,
+                todos los tokens emitidos hasta ese momento quedan anulados y las demás
+                sesiones abiertas mueren.</li>
+            <li><code>POST /api/auth/cambiar-password</code> exige la contraseña
+                <b>actual</b>: un token robado no basta para quedarte en una cuenta.</li>
+            <li>Cambia la secreta en producción con la variable de entorno
+                <code>LUDOTECA_SECRET_KEY</code>.</li>
+          </ul>
+        </section>
+
+        <!-- ============ ROLES ============ -->
+        <section class="glass doc-seccion" id="roles">
+          <h2>🛡️ Roles y permisos</h2>
+          <p class="doc-lead">Cada cuenta tiene un rol que decide qué puede hacer.</p>
+
+          <table class="tabla-doc">
+            <thead>
+              <tr><th>Rol</th><th>Puede</th><th>No puede</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>usuario</td>
+                <td>Consultar el catálogo y gestionar <b>su propia colección</b> y su contraseña.</td>
+                <td>Modificar el catálogo ni ver otras cuentas.</td>
+              </tr>
+              <tr>
+                <td>gestor</td>
+                <td>Todo lo anterior <b>más</b> editar el catálogo (videojuegos, plataformas,
+                    géneros y desarrolladoras) y <b>consultar</b> las cuentas de usuarios.</td>
+                <td>Asignar roles, restablecer contraseñas ajenas o eliminar cuentas.</td>
+              </tr>
+              <tr>
+                <td>admin</td>
+                <td>Todo lo anterior <b>más</b> asignar roles, restablecer contraseñas y
+                    eliminar cuentas (con su colección, en cascada).</td>
+                <td>Cambiarse el propio rol o eliminarse a sí mismo (siempre debe quedar
+                    al menos un administrador).</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="nota-doc aviso">
+            <span>⚠️</span>
+            <span>Si un endpoint exige un rol superior al tuyo, la API responde
+            <code>403 Forbidden</code> con un mensaje explicando el permiso necesario.</span>
+          </div>
+        </section>
+
+        <!-- ============ PRIMEROS PASOS ============ -->
+        <section class="glass doc-seccion" id="primeros-pasos">
+          <h2>🚀 Primeros pasos</h2>
+          <p class="doc-lead">De cero a tu primera petición autenticada, con curl.</p>
+
+          <h3>1. Regístrate (o inicia sesión)</h3>
+          <span class="codigo"><span class="c-com"># Registro — crea la cuenta y devuelve los tokens (HTTP 201)</span>
+curl -X POST http://localhost:8000/api/auth/registro \
+     -H "Content-Type: application/json" \
+     -d '{"nombre": "Maic", "email": "maic@ejemplo.com", "password": "secreto123"}'
+
+<span class="c-com"># Login — mismo resultado si la cuenta ya existe (HTTP 200)</span>
+curl -X POST http://localhost:8000/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email": "maic@ejemplo.com", "password": "secreto123"}'</span>
+
+          <p>La respuesta trae el par de tokens y los datos de la cuenta:</p>
+          <span class="codigo">{
+  <span class="c-clave">"access_token"</span>: <span class="c-str">"eyJhbGciOiJIUzI1NiIsInR5cCI6..."</span>,
+  <span class="c-clave">"refresh_token"</span>: <span class="c-str">"eyJhbGciOiJIUzI1NiIsInR5cCI6..."</span>,
+  <span class="c-clave">"token_type"</span>: <span class="c-str">"bearer"</span>,
+  <span class="c-clave">"expira_en_segundos"</span>: 28800,
+  <span class="c-clave">"refresh_expira_en_segundos"</span>: 604800,
+  <span class="c-clave">"usuario"</span>: { <span class="c-clave">"id"</span>: 1, <span class="c-clave">"nombre"</span>: <span class="c-str">"Maic"</span>, <span class="c-clave">"email"</span>: <span class="c-str">"maic@ejemplo.com"</span>, <span class="c-clave">"rol"</span>: <span class="c-str">"usuario"</span>, <span class="c-clave">"activo"</span>: true }
+}</span>
+
+          <h3>2. Usa el token en cada petición</h3>
+          <span class="codigo">curl http://localhost:8000/api/videojuegos \
+     -H "Authorization: Bearer TU_ACCESS_TOKEN"</span>
+
+          <h3>3. Renueva la sesión cuando caduque</h3>
+          <span class="codigo">curl -X POST http://localhost:8000/api/auth/refresh \
+     -H "Content-Type: application/json" \
+     -d '{"refresh_token": "TU_REFRESH_TOKEN"}'</span>
+
+          <div class="nota-doc">
+            <span>🧪</span>
+            <span>¿Prefieres probar a mano? El <b>Swagger</b> (arriba) tiene un botón
+            <b>Authorize</b>: pega ahí tu access token y todos los endpoints quedan
+            desbloqueados. También hay una colección de <b>Postman</b> en
+            <code>APPWEB_AUTH/postman_collection.json</code>.</span>
+          </div>
+        </section>
+
+        <!-- ============ PAGINACIÓN ============ -->
+        <section class="glass doc-seccion" id="paginacion">
+          <h2>📄 Paginación y filtros</h2>
+          <p class="doc-lead">Los listados grandes devuelven páginas, no listas enteras.</p>
+
+          <p>Tres endpoints devuelven resultados paginados:
+             <code>GET /api/videojuegos</code>, <code>GET /api/colecciones</code> y
+             <code>GET /api/usuarios</code>. Aceptan los parámetros de consulta:</p>
+
+          <table class="tabla-doc">
+            <thead>
+              <tr><th>Parámetro</th><th>Por defecto</th><th>Descripción</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>pagina</td><td><code>1</code></td><td>Número de página (mínimo 1).</td></tr>
+              <tr><td>por_pagina</td><td><code>20</code></td><td>Resultados por página (de 1 a 100).</td></tr>
+              <tr><td>q</td><td>—</td><td>Texto de búsqueda (título/descripción, o nombre/email en usuarios).</td></tr>
+            </tbody>
+          </table>
+
+          <p>Toda respuesta paginada tiene esta forma:</p>
+          <span class="codigo">{
+  <span class="c-clave">"total"</span>: 57,        <span class="c-com">// resultados que cumplen el filtro</span>
+  <span class="c-clave">"pagina"</span>: 2,       <span class="c-com">// página actual</span>
+  <span class="c-clave">"por_pagina"</span>: 20,   <span class="c-com">// tamaño de página</span>
+  <span class="c-clave">"paginas"</span>: 3,      <span class="c-com">// total de páginas</span>
+  <span class="c-clave">"items"</span>: [ ... ]   <span class="c-com">// los elementos de esta página</span>
+}</span>
+
+          <h3>Filtros y ordenación</h3>
+          <p>Cada listado tiene además sus propios filtros, recogidos en la página de
+             <a href="api.html">endpoints</a>. Por ejemplo:</p>
+          <span class="codigo"><span class="c-com"># Catálogo: juegos de RPG de Switch ordenados por año</span>
+GET /api/videojuegos?genero=RPG&amp;plataforma=Nintendo%20Switch&amp;orden=anio-desc
+
+<span class="c-com"># Mi colección: solo favoritos con valoración mínima de 8</span>
+GET /api/colecciones?favorito=true&amp;valoracion_min=8
+
+<span class="c-com"># Usuarios: búsqueda por texto y filtro de rol (gestor o admin)</span>
+GET /api/usuarios?q=maic&amp;rol=usuario</span>
+
+          <div class="nota-doc">
+            <span>🔎</span>
+            <span>Los filtros de <b>género</b>, <b>plataforma</b> y <b>desarrolladora</b>
+            del catálogo aceptan <b>ID o nombre</b>: <code>?genero=3</code> y
+            <code>?genero=RPG</code> son equivalentes.</span>
+          </div>
+        </section>
+
+        <!-- ============ ESTRUCTURAS ============ -->
+        <section class="glass doc-seccion" id="estructuras">
+          <h2>🧱 Estructuras de datos</h2>
+          <p class="doc-lead">Los campos de los objetos que intercambia la API.</p>
+
+          <h3>Usuario</h3>
+          <table class="tabla-doc">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>id</td><td><code>int</code></td><td>Identificador único.</td></tr>
+              <tr><td>nombre</td><td><code>string</code></td><td>De 2 a 50 caracteres.</td></tr>
+              <tr><td>email</td><td><code>string</code></td><td>Único, máx. 150 caracteres.</td></tr>
+              <tr><td>rol</td><td><code>string</code></td><td><code>usuario</code> | <code>gestor</code> | <code>admin</code>.</td></tr>
+              <tr><td>activo</td><td><code>boolean</code></td><td>Las cuentas desactivadas no pueden entrar.</td></tr>
+              <tr><td>fecha_registro</td><td><code>datetime</code></td><td>Cuándo se creó la cuenta.</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Videojuego</h3>
+          <table class="tabla-doc">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>id</td><td><code>int</code></td><td>Identificador único.</td></tr>
+              <tr><td>titulo</td><td><code>string</code></td><td>Obligatorio, máx. 200 caracteres.</td></tr>
+              <tr><td>descripcion</td><td><code>string</code></td><td>Obligatoria, máx. 4000 caracteres.</td></tr>
+              <tr><td>caratula_url</td><td><code>string</code></td><td>URL http(s) de la imagen.</td></tr>
+              <tr><td>anio_lanzamiento</td><td><code>int</code></td><td>Entre 1970 y 2035.</td></tr>
+              <tr><td>clasificacion</td><td><code>string|null</code></td><td>Clasificación por edad (ej. «PEGI 16»).</td></tr>
+              <tr><td>puntuacion</td><td><code>float|null</code></td><td>Media de 0 a 10.</td></tr>
+              <tr><td>desarrolladora</td><td><code>objeto|null</code></td><td>Estudio completo (con su id, país y web).</td></tr>
+              <tr><td>plataformas</td><td><code>lista</code></td><td>Plataformas donde está disponible.</td></tr>
+              <tr><td>generos</td><td><code>lista</code></td><td>Géneros asignados.</td></tr>
+            </tbody>
+          </table>
+          <p>Al <b>crear o actualizar</b> no se envían los objetos anidados, sino sus IDs:
+             <code>desarrolladora_id</code>, <code>plataformas_ids</code> (lista) y
+             <code>generos_ids</code> (lista).</p>
+
+          <h3>Elemento de la colección</h3>
+          <table class="tabla-doc">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>id</td><td><code>int</code></td><td>Identificador único del ejemplar.</td></tr>
+              <tr><td>videojuego</td><td><code>objeto</code></td><td>Ficha completa del juego (solo lectura; al crear se envía <code>videojuego_id</code>).</td></tr>
+              <tr><td>plataforma</td><td><code>objeto|null</code></td><td>Plataforma del ejemplar (al crear: <code>plataforma_id</code>).</td></tr>
+              <tr><td>estado</td><td><code>string</code></td><td><code>nuevo</code> | <code>como nuevo</code> | <code>bueno</code> | <code>aceptable</code> | <code>malo</code> | <code>digital</code>.</td></tr>
+              <tr><td>fecha_compra</td><td><code>fecha|null</code></td><td>En formato <code>AAAA-MM-DD</code>.</td></tr>
+              <tr><td>precio_compra</td><td><code>float|null</code></td><td>En euros, mínimo 0.</td></tr>
+              <tr><td>valoracion</td><td><code>int|null</code></td><td>Personal, de 1 a 10.</td></tr>
+              <tr><td>favorito</td><td><code>boolean</code></td><td>Marca de favorito (⭐).</td></tr>
+              <tr><td>notas</td><td><code>string|null</code></td><td>Notas personales, máx. 2000 caracteres.</td></tr>
+              <tr><td>fecha_adicion</td><td><code>datetime</code></td><td>Cuándo lo añadiste (solo lectura).</td></tr>
+            </tbody>
+          </table>
+
+          <div class="nota-doc">
+            <span>💾</span>
+            <span>Todos los <code>PUT</code> de la API son <b>parciales</b>: si no envías un
+            campo, no se modifica. No hace falta reenviar el objeto entero.</span>
+          </div>
+        </section>
+
+        <!-- ============ ERRORES ============ -->
+        <section class="glass doc-seccion" id="errores">
+          <h2>🚨 Códigos de estado</h2>
+          <p class="doc-lead">Así responde la API ante cada situación.</p>
+
+          <table class="tabla-doc">
+            <thead><tr><th>Código</th><th>Significado</th><th>Ejemplo</th></tr></thead>
+            <tbody>
+              <tr><td>200 OK</td><td>Petición correcta (GET, PUT, PATCH, DELETE).</td><td>Listar videojuegos.</td></tr>
+              <tr><td>201 Created</td><td>Recurso creado con éxito.</td><td>Registro o alta de un juego.</td></tr>
+              <tr><td>400 Bad Request</td><td>Datos incorrectos (validación o lógica).</td><td>Contraseña actual errónea al cambiarla.</td></tr>
+              <tr><td>401 Unauthorized</td><td>Falta, caducó o no es válido el token.</td><td>Acceder sin cabecera <code>Authorization</code>.</td></tr>
+              <tr><td>403 Forbidden</td><td>Token válido, pero tu rol no alcanza.</td><td>Un «usuario» intentando crear un juego.</td></tr>
+              <tr><td>404 Not Found</td><td>El recurso pedido no existe.</td><td><code>GET /api/videojuegos/999999</code>.</td></tr>
+              <tr><td>409 Conflict</td><td>La operación entraría en conflicto.</td><td>Email ya registrado, duplicado en la colección, borrar lo que está en uso.</td></tr>
+            </tbody>
+          </table>
+
+          <p>Todos los errores tienen el mismo formato, con un mensaje legible en <code>detail</code>:</p>
+          <span class="codigo">{
+  <span class="c-clave">"detail"</span>: <span class="c-str">"El videojuego con id 999999 no existe"</span>
+}</span>
+        </section>
+
+        <!-- ============ EJEMPLOS FETCH ============ -->
+        <section class="glass doc-seccion" id="ejemplos">
+          <h2>🌍 Ejemplos con fetch (JavaScript)</h2>
+          <p class="doc-lead">Listo para pegar en la consola del navegador o en tu frontend.</p>
+
+          <h3>Iniciar sesión</h3>
+          <span class="codigo">const BASE = "http://localhost:8000";
+
+const res = await fetch(`${BASE}/api/auth/login`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email: "maic@ejemplo.com", password: "secreto123" }),
+});
+const { access_token, refresh_token } = await res.json();</span>
+
+          <h3>Listar videojuegos con un filtro</h3>
+          <span class="codigo">const res = await fetch(
+  `${BASE}/api/videojuegos?q=zelda&amp;orden=anio-desc&amp;por_pagina=5`,
+  { headers: { Authorization: `Bearer ${access_token}` } }
+);
+const { total, items } = await res.json();</span>
+
+          <h3>Añadir un juego a mi colección</h3>
+          <span class="codigo">await fetch(`${BASE}/api/colecciones`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${access_token}`,
+  },
+  body: JSON.stringify({
+    videojuego_id: 1,
+    plataforma_id: 2,
+    estado: "bueno",
+    precio_compra: 59.99,
+    valoracion: 9,
+    favorito: true,
+  }),
+});</span>
+
+          <h3>Renovar la sesión al recibir un 401</h3>
+          <span class="codigo">const nueva = await fetch(`${BASE}/api/auth/refresh`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ refresh_token }),
+});
+const par = await nueva.json();
+<span class="c-com">// par.access_token y par.refresh_token sustituyen a los anteriores</span></span>
+        </section>
+
+        <!-- ============ ENLACES ============ -->
+        <section class="glass doc-seccion" id="enlaces">
+          <h2>🔗 Enlaces útiles</h2>
+          <p class="doc-lead">Todo lo demás, a un clic.</p>
+
+          <table class="tabla-doc">
+            <thead><tr><th>Recurso</th><th>Dónde</th></tr></thead>
+            <tbody>
+              <tr><td>Panel web</td><td><a href="index.html">Ludoteca (esta misma web)</a></td></tr>
+              <tr><td>Endpoints</td><td><a href="api.html">Todos los comandos y peticiones</a></td></tr>
+              <tr><td>Swagger</td><td><a href="#" data-enlace-swagger="/docs" target="_blank" rel="noopener">Documentación interactiva</a></td></tr>
+              <tr><td>ReDoc</td><td><a href="#" data-enlace-swagger="/redoc" target="_blank" rel="noopener">Documentación alternativa</a></td></tr>
+              <tr><td>OpenAPI</td><td><a href="#" data-enlace-swagger="/openapi.json" target="_blank" rel="noopener">Esquema OpenAPI (JSON)</a></td></tr>
+              <tr><td>Postman</td><td><code>APPWEB_AUTH/postman_collection.json</code></td></tr>
+              <tr><td>Salud</td><td><a href="#" data-enlace-swagger="/api/salud" target="_blank" rel="noopener">GET /api/salud</a> — comprueba que la API vive</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    /* Los enlaces a /docs, /redoc… son absolutos al servidor de la API.
+       Si la página se abre como archivo (file://), apuntamos a localhost:8000. */
+    const BASE = location.protocol === "file:" ? "http://localhost:8000" : "";
+    document.querySelectorAll("[data-enlace-swagger]").forEach((a) => {
+      a.href = BASE + a.dataset.enlaceSwagger;
+    });
+  </script>
+</body>
+</html>

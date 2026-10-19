@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FBF5EC">
+  <title>Endpoints · API Colección de Videojuegos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Fondo animado -->
+  <div class="blobs" aria-hidden="true">
+    <span class="blob b1"></span>
+    <span class="blob b2"></span>
+    <span class="blob b3"></span>
+  </div>
+
+  <!-- Cabecera -->
+  <header class="doc-topbar">
+    <div class="brand">
+      <span class="logo">🎮</span>
+      <div class="brand-texto">
+        <h1>Ludoteca</h1>
+        <p>endpoints de la API</p>
+      </div>
+    </div>
+    <nav class="doc-nav">
+      <a href="documentacion.html">📚 Documentación</a>
+      <a href="api.html" class="doc-nav-activo">🔌 Todos los endpoints</a>
+      <a href="index.html">🏠 Volver al panel</a>
+    </nav>
+  </header>
+
+  <main class="doc-envoltorio">
+    <!-- Hero -->
+    <section class="glass doc-hero">
+      <h1>Todos los endpoints <span class="doc-version">v2.2.0</span></h1>
+      <p>Aquí tienes <b>todos los comandos y peticiones</b> que puedes solicitar a la API,
+         agrupados por apartado. Cada endpoint indica su método HTTP, qué permiso necesitas,
+         sus parámetros y un ejemplo de cuerpo JSON. La base URL por defecto es
+         <code>http://localhost:8000</code>.</p>
+      <div class="doc-hero-acciones">
+        <a class="btn btn-primario" href="documentacion.html">📚 Cómo usar la API</a>
+        <a class="btn" href="#" data-enlace-swagger="/docs" target="_blank" rel="noopener">⚡ Probar en Swagger</a>
+      </div>
+    </section>
+
+    <!-- Buscador y filtros -->
+    <div class="glass ep-filtros">
+      <div class="campo campo-buscar">
+        <span class="icono">🔎</span>
+        <input type="search" id="buscar-endpoint"
+               placeholder="Buscar endpoint, por ejemplo «favorito» o «estadísticas»…"
+               autocomplete="off">
+      </div>
+      <div class="metodo-filtros" id="metodo-filtros">
+        <button class="metodo-filtro activo" data-metodo="">Todos</button>
+        <button class="metodo-filtro" data-metodo="GET">GET</button>
+        <button class="metodo-filtro" data-metodo="POST">POST</button>
+        <button class="metodo-filtro" data-metodo="PUT">PUT</button>
+        <button class="metodo-filtro" data-metodo="PATCH">PATCH</button>
+        <button class="metodo-filtro" data-metodo="DELETE">DELETE</button>
+      </div>
+      <span class="ep-contador" id="ep-contador"><b>0</b> endpoints</span>
+    </div>
+
+    <div class="doc-cuerpo">
+      <!-- Índice lateral -->
+      <aside class="glass doc-indice">
+        <h3>Apartados</h3>
+        <ul>
+          <li><a href="#g-general">General</a></li>
+          <li><a href="#g-auth">Autenticación</a></li>
+          <li><a href="#g-videojuegos">Videojuegos</a></li>
+          <li><a href="#g-plataformas">Plataformas</a></li>
+          <li><a href="#g-generos">Géneros</a></li>
+          <li><a href="#g-desarrolladoras">Desarrolladoras</a></li>
+          <li><a href="#g-colecciones">Colección</a></li>
+          <li><a href="#g-estadisticas">Estadísticas</a></li>
+          <li><a href="#g-usuarios">Usuarios</a></li>
+        </ul>
+      </aside>
+
+      <div class="doc-contenido" id="lista-endpoints">
+
+        <!-- ================= GENERAL ================= -->
+        <div class="grupo-endpoints" id="g-general">
+          <h2 class="grupo-titulo glass" style="padding:14px 18px">🧭 General <span class="grupo-ruta">raíz de la API</span></h2>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/</code>
+              <span class="acceso acc-publico">Público</span>
+            </div>
+            <p class="ep-desc">Información general: mensaje de bienvenida, versión y mapa de apartados.</p>
+            <details class="ep-detalle">
+              <summary>Ejemplo</summary>
+              <span class="codigo">curl http://localhost:8000/</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/salud</code>
+              <span class="acceso acc-publico">Público</span>
+            </div>
+            <p class="ep-desc">Comprueba que la API está viva. Devuelve <code>{"estado": "ok"}</code>.</p>
+            <details class="ep-detalle">
+              <summary>Ejemplo</summary>
+              <span class="codigo">curl http://localhost:8000/api/salud</span>
+            </details>
+          </article>
+        </div>
+
+        <!-- ================= AUTENTICACIÓN ================= -->
+        <div class="grupo-endpoints" id="g-auth">
+          <h2 class="grupo-titulo glass" style="padding:14px 18px">🔐 Autenticación <span class="grupo-ruta">/api/auth</span></h2>
+
+          <article class="ep" data-metodo="POST">
+            <div class="ep-cab">
+              <span class="metodo m-post">POST</span>
+              <code class="ep-ruta">/api/auth/registro</code>
+              <span class="acceso acc-publico">Público</span>
+            </div>
+            <p class="ep-desc">Crea una cuenta y devuelve el par de tokens (inicia sesión al instante). HTTP 201.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo y respuesta</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{
+  <span class="c-clave">"nombre"</span>: <span class="c-str">"Maic"</span>,        <span class="c-com">// 2–50 caracteres</span>
+  <span class="c-clave">"email"</span>: <span class="c-str">"maic@ejemplo.com"</span>, <span class="c-com">// único</span>
+  <span class="c-clave">"password"</span>: <span class="c-str">"secreto123"</span>   <span class="c-com">// 6–72 caracteres</span>
+}</span>
+              <h4>Respuesta (201)</h4>
+              <span class="codigo">{ <span class="c-clave">"access_token"</span>: <span class="c-str">"..."</span>, <span class="c-clave">"refresh_token"</span>: <span class="c-str">"..."</span>, <span class="c-clave">"token_type"</span>: <span class="c-str">"bearer"</span>,
+  <span class="c-clave">"expira_en_segundos"</span>: 28800, <span class="c-clave">"refresh_expira_en_segundos"</span>: 604800, <span class="c-clave">"usuario"</span>: { ... } }</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="POST">
+            <div class="ep-cab">
+              <span class="metodo m-post">POST</span>
+              <code class="ep-ruta">/api/auth/login</code>
+              <span class="acceso acc-publico">Público</span>
+            </div>
+            <p class="ep-desc">Inicia sesión con email y contraseña y devuelve el par de tokens.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo y respuesta</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{
+  <span class="c-clave">"email"</span>: <span class="c-str">"maic@ejemplo.com"</span>,
+  <span class="c-clave">"password"</span>: <span class="c-str">"secreto123"</span>
+}</span>
+              <h4>Errores</h4>
+              <span class="codigo">401 · Email o contraseña incorrectos
+403 · La cuenta está desactivada</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="POST">
+            <div class="ep-cab">
+              <span class="metodo m-post">POST</span>
+              <code class="ep-ruta">/api/auth/refresh</code>
+              <span class="acceso acc-publico">Público</span>
+            </div>
+            <p class="ep-desc">Renueva la sesión con el refresh token, sin contraseña. El refresh anterior queda anulado (rotación).</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{ <span class="c-clave">"refresh_token"</span>: <span class="c-str">"eyJhbGciOiJIUzI1NiIs..."</span> }</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="POST">
+            <div class="ep-cab">
+              <span class="metodo m-post">POST</span>
+              <code class="ep-ruta">/api/auth/cambiar-password</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Cambia mi propia contraseña (cualquier rol). Exige la actual y anula todas las demás sesiones. Devuelve un par de tokens nuevo.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{
+  <span class="c-clave">"password_actual"</span>: <span class="c-str">"secreto123"</span>,
+  <span class="c-clave">"password_nueva"</span>: <span class="c-str">"clave-nueva-123"</span>,  <span class="c-com">// distinta de la actual</span>
+  <span class="c-clave">"confirmar"</span>: <span class="c-str">"clave-nueva-123"</span>       <span class="c-com">// debe coincidir</span>
+}</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/auth/yo</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Datos de la cuenta autenticada (id, nombre, email, rol, activo, fecha de registro).</p>
+            <details class="ep-detalle">
+              <summary>Ejemplo</summary>
+              <span class="codigo">curl http://localhost:8000/api/auth/yo \
+     -H "Authorization: Bearer TU_ACCESS_TOKEN"</span>
+            </details>
+          </article>
+        </div>
+
+        <!-- ================= VIDEOJUEGOS ================= -->
+        <div class="grupo-endpoints" id="g-videojuegos">
+          <h2 class="grupo-titulo glass" style="padding:14px 18px">🕹️ Videojuegos <span class="grupo-ruta">/api/videojuegos</span></h2>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/videojuegos</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Lista el catálogo con filtros, búsqueda, ordenación y paginación.</p>
+            <details class="ep-detalle">
+              <summary>Parámetros de consulta</summary>
+              <table class="tabla-doc">
+                <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+                <tbody>
+                  <tr><td>q</td><td><code>string</code></td><td>Busca por título o descripción (1–100 caracteres).</td></tr>
+                  <tr><td>genero</td><td><code>string</code></td><td>ID o nombre del género (ej. <code>3</code> o <code>RPG</code>).</td></tr>
+                  <tr><td>plataforma</td><td><code>string</code></td><td>ID o nombre de la plataforma.</td></tr>
+                  <tr><td>desarrolladora</td><td><code>string</code></td><td>ID o nombre de la desarrolladora.</td></tr>
+                  <tr><td>anio_desde</td><td><code>int</code></td><td>Año mínimo de lanzamiento (1970–2035).</td></tr>
+                  <tr><td>anio_hasta</td><td><code>int</code></td><td>Año máximo de lanzamiento (1970–2035).</td></tr>
+                  <tr><td>orden</td><td><code>string</code></td><td><code>titulo-asc</code> (defecto) | <code>titulo-desc</code> | <code>anio-asc</code> | <code>anio-desc</code> | <code>recientes</code>.</td></tr>
+                  <tr><td>pagina</td><td><code>int</code></td><td>Página (mínimo 1, defecto 1).</td></tr>
+                  <tr><td>por_pagina</td><td><code>int</code></td><td>Resultados por página (1–100, defecto 20).</td></tr>
+                </tbody>
+              </table>
+              <h4>Ejemplo</h4>
+              <span class="codigo">curl "http://localhost:8000/api/videojuegos?genero=RPG&amp;orden=anio-desc&amp;por_pagina=5" \
+     -H "Authorization: Bearer TU_ACCESS_TOKEN"</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/videojuegos/{videojuego_id}</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Ficha completa de un juego: carátula, descripción, desarrolladora, plataformas y géneros.</p>
+            <details class="ep-detalle">
+              <summary>Ejemplo</summary>
+              <span class="codigo">curl http://localhost:8000/api/videojuegos/1 \
+     -H "Authorization: Bearer TU_ACCESS_TOKEN"</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="POST">
+            <div class="ep-cab">
+              <span class="metodo m-post">POST</span>
+              <code class="ep-ruta">/api/videojuegos</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Crea un videojuego en el catálogo. HTTP 201.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{
+  <span class="c-clave">"titulo"</span>: <span class="c-str">"Elden Ring"</span>,
+  <span class="c-clave">"descripcion"</span>: <span class="c-str">"Un vasto mundo de fantasía..."</span>,
+  <span class="c-clave">"caratula_url"</span>: <span class="c-str">"https://placehold.co/600x800?text=Elden+Ring"</span>,
+  <span class="c-clave">"anio_lanzamiento"</span>: 2022,          <span class="c-com">// 1970–2035</span>
+  <span class="c-clave">"clasificacion"</span>: <span class="c-str">"PEGI 16"</span>,       <span class="c-com">// opcional</span>
+  <span class="c-clave">"puntuacion"</span>: 9.5,                <span class="c-com">// opcional, 0–10</span>
+  <span class="c-clave">"desarrolladora_id"</span>: 1,           <span class="c-com">// opcional (null = sin asignar)</span>
+  <span class="c-clave">"plataformas_ids"</span>: [1, 2],        <span class="c-com">// IDs de plataformas</span>
+  <span class="c-clave">"generos_ids"</span>: [1, 3]             <span class="c-com">// IDs de géneros</span>
+}</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="PUT">
+            <div class="ep-cab">
+              <span class="metodo m-put">PUT</span>
+              <code class="ep-ruta">/api/videojuegos/{videojuego_id}</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Actualiza un videojuego. Es <b>parcial</b>: solo se modifican los campos enviados.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON (ejemplo parcial)</h4>
+              <span class="codigo">{
+  <span class="c-clave">"puntuacion"</span>: 9.7,
+  <span class="c-clave">"generos_ids"</span>: [1, 3, 5]
+}</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="DELETE">
+            <div class="ep-cab">
+              <span class="metodo m-delete">DELETE</span>
+              <code class="ep-ruta">/api/videojuegos/{videojuego_id}</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Elimina un videojuego del catálogo (arrastra los ejemplares de las colecciones).</p>
+            <details class="ep-detalle">
+              <summary>Respuesta</summary>
+              <span class="codigo">{ <span class="c-clave">"mensaje"</span>: <span class="c-str">"Videojuego eliminado correctamente"</span>, <span class="c-clave">"id"</span>: 1 }</span>
+            </details>
+          </article>
+        </div>
+
+        <!-- ================= PLATAFORMAS ================= -->
+        <div class="grupo-endpoints" id="g-plataformas">
+          <h2 class="grupo-titulo glass" style="padding:14px 18px">💾 Plataformas <span class="grupo-ruta">/api/plataformas</span></h2>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/plataformas</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Lista todas las plataformas ordenadas por nombre (sin paginar).</p>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/plataformas/{plataforma_id}</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Obtiene una plataforma por su ID.</p>
+          </article>
+
+          <article class="ep" data-metodo="POST">
+            <div class="ep-cab">
+              <span class="metodo m-post">POST</span>
+              <code class="ep-ruta">/api/plataformas</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Crea una plataforma. HTTP 201. Devuelve 409 si ya existe otra con el mismo nombre.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{
+  <span class="c-clave">"nombre"</span>: <span class="c-str">"Nintendo Switch"</span>,   <span class="c-com">// 2–100 caracteres, obligatorio</span>
+  <span class="c-clave">"fabricante"</span>: <span class="c-str">"Nintendo"</span>,        <span class="c-com">// opcional</span>
+  <span class="c-clave">"anio_lanzamiento"</span>: 2017         <span class="c-com">// opcional, 1970–2035</span>
+}</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="PUT">
+            <div class="ep-cab">
+              <span class="metodo m-put">PUT</span>
+              <code class="ep-ruta">/api/plataformas/{plataforma_id}</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Actualiza una plataforma (parcial: solo los campos enviados).</p>
+          </article>
+
+          <article class="ep" data-metodo="DELETE">
+            <div class="ep-cab">
+              <span class="metodo m-delete">DELETE</span>
+              <code class="ep-ruta">/api/plataformas/{plataforma_id}</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Elimina una plataforma. Devuelve 409 si está en uso por videojuegos o ejemplares.</p>
+          </article>
+        </div>
+
+        <!-- ================= GÉNEROS ================= -->
+        <div class="grupo-endpoints" id="g-generos">
+          <h2 class="grupo-titulo glass" style="padding:14px 18px">🎭 Géneros <span class="grupo-ruta">/api/generos</span></h2>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/generos</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Lista todos los géneros ordenados por nombre (sin paginar).</p>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/generos/{genero_id}</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Obtiene un género por su ID.</p>
+          </article>
+
+          <article class="ep" data-metodo="POST">
+            <div class="ep-cab">
+              <span class="metodo m-post">POST</span>
+              <code class="ep-ruta">/api/generos</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Crea un género. HTTP 201. Devuelve 409 si ya existe otro con el mismo nombre.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{
+  <span class="c-clave">"nombre"</span>: <span class="c-str">"RPG"</span>,              <span class="c-com">// 2–80 caracteres, obligatorio</span>
+  <span class="c-clave">"descripcion"</span>: <span class="c-str">"Juegos de rol"</span>   <span class="c-com">// opcional, máx. 1000</span>
+}</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="PUT">
+            <div class="ep-cab">
+              <span class="metodo m-put">PUT</span>
+              <code class="ep-ruta">/api/generos/{genero_id}</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Actualiza un género (parcial: solo los campos enviados).</p>
+          </article>
+
+          <article class="ep" data-metodo="DELETE">
+            <div class="ep-cab">
+              <span class="metodo m-delete">DELETE</span>
+              <code class="ep-ruta">/api/generos/{genero_id}</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Elimina un género. Devuelve 409 si está asignado a algún videojuego.</p>
+          </article>
+        </div>
+
+        <!-- ================= DESARROLLADORAS ================= -->
+        <div class="grupo-endpoints" id="g-desarrolladoras">
+          <h2 class="grupo-titulo glass" style="padding:14px 18px">🏢 Desarrolladoras <span class="grupo-ruta">/api/desarrolladoras</span></h2>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/desarrolladoras</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Lista todas las desarrolladoras ordenadas por nombre (sin paginar).</p>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/desarrolladoras/{desarrolladora_id}</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Obtiene una desarrolladora por su ID.</p>
+          </article>
+
+          <article class="ep" data-metodo="POST">
+            <div class="ep-cab">
+              <span class="metodo m-post">POST</span>
+              <code class="ep-ruta">/api/desarrolladoras</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Crea una desarrolladora. HTTP 201. Devuelve 409 si ya existe otra con el mismo nombre.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{
+  <span class="c-clave">"nombre"</span>: <span class="c-str">"FromSoftware"</span>,   <span class="c-com">// 2–120 caracteres, obligatorio</span>
+  <span class="c-clave">"pais"</span>: <span class="c-str">"Japón"</span>,            <span class="c-com">// opcional</span>
+  <span class="c-clave">"web"</span>: <span class="c-str">"https://www.fromsoftware.jp"</span>  <span class="c-com">// opcional</span>
+}</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="PUT">
+            <div class="ep-cab">
+              <span class="metodo m-put">PUT</span>
+              <code class="ep-ruta">/api/desarrolladoras/{desarrolladora_id}</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Actualiza una desarrolladora (parcial: solo los campos enviados).</p>
+          </article>
+
+          <article class="ep" data-metodo="DELETE">
+            <div class="ep-cab">
+              <span class="metodo m-delete">DELETE</span>
+              <code class="ep-ruta">/api/desarrolladoras/{desarrolladora_id}</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Elimina una desarrolladora. Devuelve 409 si tiene videojuegos asociados.</p>
+          </article>
+        </div>
+
+        <!-- ================= COLECCIÓN ================= -->
+        <div class="grupo-endpoints" id="g-colecciones">
+          <h2 class="grupo-titulo glass" style="padding:14px 18px">📚 Colección <span class="grupo-ruta">/api/colecciones</span></h2>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/colecciones</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Lista <b>tu</b> colección (cada usuario solo ve la suya) con filtros y paginación.</p>
+            <details class="ep-detalle">
+              <summary>Parámetros de consulta</summary>
+              <table class="tabla-doc">
+                <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+                <tbody>
+                  <tr><td>q</td><td><code>string</code></td><td>Busca por título o descripción del videojuego.</td></tr>
+                  <tr><td>estado</td><td><code>string</code></td><td><code>nuevo</code> | <code>como nuevo</code> | <code>bueno</code> | <code>aceptable</code> | <code>malo</code> | <code>digital</code>.</td></tr>
+                  <tr><td>favorito</td><td><code>bool</code></td><td><code>true</code> = solo favoritos; <code>false</code> = solo no favoritos.</td></tr>
+                  <tr><td>plataforma</td><td><code>string</code></td><td>ID o nombre de la plataforma del ejemplar.</td></tr>
+                  <tr><td>valoracion_min</td><td><code>int</code></td><td>Valoración mínima (1–10).</td></tr>
+                  <tr><td>orden</td><td><code>string</code></td><td><code>fecha-desc</code> (defecto) | <code>fecha-asc</code> | <code>valoracion-desc</code> | <code>precio-desc</code> | <code>titulo-asc</code>.</td></tr>
+                  <tr><td>pagina</td><td><code>int</code></td><td>Página (mínimo 1, defecto 1).</td></tr>
+                  <tr><td>por_pagina</td><td><code>int</code></td><td>Resultados por página (1–100, defecto 20).</td></tr>
+                </tbody>
+              </table>
+              <h4>Ejemplo</h4>
+              <span class="codigo">curl "http://localhost:8000/api/colecciones?favorito=true&amp;valoracion_min=8" \
+     -H "Authorization: Bearer TU_ACCESS_TOKEN"</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/colecciones/{item_id}</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Obtiene un ejemplar de tu colección (404 si no existe o es de otro usuario).</p>
+          </article>
+
+          <article class="ep" data-metodo="POST">
+            <div class="ep-cab">
+              <span class="metodo m-post">POST</span>
+              <code class="ep-ruta">/api/colecciones</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Añade un videojuego del catálogo a tu colección. HTTP 201. Devuelve 409 si ya lo tienes en esa plataforma.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{
+  <span class="c-clave">"videojuego_id"</span>: 1,             <span class="c-com">// obligatorio (del catálogo)</span>
+  <span class="c-clave">"plataforma_id"</span>: 2,            <span class="c-com">// opcional (null = digital/cualquiera)</span>
+  <span class="c-clave">"estado"</span>: <span class="c-str">"bueno"</span>,           <span class="c-com">// defecto: "bueno"</span>
+  <span class="c-clave">"fecha_compra"</span>: <span class="c-str">"2024-05-17"</span>, <span class="c-com">// opcional (AAAA-MM-DD)</span>
+  <span class="c-clave">"precio_compra"</span>: 59.99,        <span class="c-com">// opcional, mínimo 0</span>
+  <span class="c-clave">"valoracion"</span>: 9,              <span class="c-com">// opcional, 1–10</span>
+  <span class="c-clave">"favorito"</span>: true,             <span class="c-com">// defecto: false</span>
+  <span class="c-clave">"notas"</span>: <span class="c-str">"Edición física"</span>   <span class="c-com">// opcional, máx. 2000</span>
+}</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="PUT">
+            <div class="ep-cab">
+              <span class="metodo m-put">PUT</span>
+              <code class="ep-ruta">/api/colecciones/{item_id}</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Actualiza un ejemplar (parcial). Puedes cambiar su plataforma, estado, precio, valoración, notas…</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON (ejemplo parcial)</h4>
+              <span class="codigo">{
+  <span class="c-clave">"estado"</span>: <span class="c-str">"como nuevo"</span>,
+  <span class="c-clave">"valoracion"</span>: 10
+}</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="PATCH">
+            <div class="ep-cab">
+              <span class="metodo m-patch">PATCH</span>
+              <code class="ep-ruta">/api/colecciones/{item_id}/favorito</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Marca o desmarca un ejemplar como favorito (⭐).</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{ <span class="c-clave">"favorito"</span>: true }</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="DELETE">
+            <div class="ep-cab">
+              <span class="metodo m-delete">DELETE</span>
+              <code class="ep-ruta">/api/colecciones/{item_id}</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Elimina un ejemplar de tu colección.</p>
+            <details class="ep-detalle">
+              <summary>Respuesta</summary>
+              <span class="codigo">{ <span class="c-clave">"mensaje"</span>: <span class="c-str">"Ejemplar eliminado de la colección"</span>, <span class="c-clave">"id"</span>: 1 }</span>
+            </details>
+          </article>
+        </div>
+
+        <!-- ================= ESTADÍSTICAS ================= -->
+        <div class="grupo-endpoints" id="g-estadisticas">
+          <h2 class="grupo-titulo glass" style="padding:14px 18px">📊 Estadísticas <span class="grupo-ruta">/api/estadisticas</span></h2>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/estadisticas/resumen</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Totales del catálogo y de tu colección: juegos, plataformas, géneros, ejemplares, favoritos, valoración media e inversión total.</p>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/estadisticas/por-plataforma</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Juegos del catálogo y ejemplares tuyos, agrupados por plataforma (con fabricante).</p>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/estadisticas/por-genero</code>
+              <span class="acceso acc-publico">Público</span>
+            </div>
+            <p class="ep-desc">Juegos del catálogo agrupados por género.</p>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/estadisticas/por-estado</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Tus ejemplares agrupados por estado (nuevo, bueno, digital…).</p>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/estadisticas/top-valoraciones</code>
+              <span class="acceso acc-usuario">Token</span>
+            </div>
+            <p class="ep-desc">Los 10 ejemplares de tu colección mejor valorados.</p>
+          </article>
+        </div>
+
+        <!-- ================= USUARIOS ================= -->
+        <div class="grupo-endpoints" id="g-usuarios">
+          <h2 class="grupo-titulo glass" style="padding:14px 18px">👥 Usuarios <span class="grupo-ruta">/api/usuarios</span></h2>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/usuarios</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Lista las cuentas de la plataforma con búsqueda y paginación.</p>
+            <details class="ep-detalle">
+              <summary>Parámetros de consulta</summary>
+              <table class="tabla-doc">
+                <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+                <tbody>
+                  <tr><td>q</td><td><code>string</code></td><td>Busca por nombre, email o rol.</td></tr>
+                  <tr><td>rol</td><td><code>string</code></td><td>Filtra por rol exacto: <code>usuario</code> | <code>gestor</code> | <code>admin</code>.</td></tr>
+                  <tr><td>pagina</td><td><code>int</code></td><td>Página (defecto 1).</td></tr>
+                  <tr><td>por_pagina</td><td><code>int</code></td><td>Resultados por página (1–100, defecto 12).</td></tr>
+                </tbody>
+              </table>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="GET">
+            <div class="ep-cab">
+              <span class="metodo m-get">GET</span>
+              <code class="ep-ruta">/api/usuarios/{usuario_id}</code>
+              <span class="acceso acc-gestor">Gestor</span>
+            </div>
+            <p class="ep-desc">Ver los datos de una cuenta concreta.</p>
+          </article>
+
+          <article class="ep" data-metodo="PATCH">
+            <div class="ep-cab">
+              <span class="metodo m-patch">PATCH</span>
+              <code class="ep-ruta">/api/usuarios/{usuario_id}/rol</code>
+              <span class="acceso acc-admin">Admin</span>
+            </div>
+            <p class="ep-desc">Cambia el rol de una cuenta. No puedes cambiar tu propio rol y siempre debe quedar al menos un administrador.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{ <span class="c-clave">"rol"</span>: <span class="c-str">"gestor"</span> }  <span class="c-com">// "usuario" | "gestor" | "admin"</span></span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="PATCH">
+            <div class="ep-cab">
+              <span class="metodo m-patch">PATCH</span>
+              <code class="ep-ruta">/api/usuarios/{usuario_id}/password</code>
+              <span class="acceso acc-admin">Admin</span>
+            </div>
+            <p class="ep-desc">Restablece la contraseña de otra cuenta sin conocer la anterior (proceso de recuperación). Anula las sesiones abiertas de esa cuenta. Para la tuya propia usa <code>POST /api/auth/cambiar-password</code>.</p>
+            <details class="ep-detalle">
+              <summary>Cuerpo</summary>
+              <h4>Cuerpo JSON</h4>
+              <span class="codigo">{
+  <span class="c-clave">"password_nueva"</span>: <span class="c-str">"recuperada-123"</span>,  <span class="c-com">// 6–72 caracteres</span>
+  <span class="c-clave">"confirmar"</span>: <span class="c-str">"recuperada-123"</span>      <span class="c-com">// debe coincidir</span>
+}</span>
+            </details>
+          </article>
+
+          <article class="ep" data-metodo="DELETE">
+            <div class="ep-cab">
+              <span class="metodo m-delete">DELETE</span>
+              <code class="ep-ruta">/api/usuarios/{usuario_id}</code>
+              <span class="acceso acc-admin">Admin</span>
+            </div>
+            <p class="ep-desc">Elimina una cuenta y, en cascada, su colección. No puedes eliminar la tuya propia.</p>
+            <details class="ep-detalle">
+              <summary>Respuesta</summary>
+              <span class="codigo">{ <span class="c-clave">"mensaje"</span>: <span class="c-str">"Cuenta de maic@ejemplo.com eliminada junto con 3 ejemplar(es) de su colección"</span>,
+  <span class="c-clave">"id"</span>: 2, <span class="c-clave">"ejemplares_eliminados"</span>: 3 }</span>
+            </details>
+          </article>
+        </div>
+
+        <p class="vacio" id="sin-resultados" hidden>🔍 No hay endpoints que coincidan con la búsqueda.</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    /* ---------------------------------------------------------
+       Buscador y filtros de la lista de endpoints
+       --------------------------------------------------------- */
+    const BASE = location.protocol === "file:" ? "http://localhost:8000" : "";
+    document.querySelectorAll("[data-enlace-swagger]").forEach((a) => {
+      a.href = BASE + a.dataset.enlaceSwagger;
+    });
+
+    const input = document.getElementById("buscar-endpoint");
+    const contador = document.getElementById("ep-contador");
+    const vacio = document.getElementById("sin-resultados");
+    const botones = Array.from(document.querySelectorAll(".metodo-filtro"));
+    const endpoints = Array.from(document.querySelectorAll(".ep"));
+    let metodoActivo = "";
+
+    function filtrar() {
+      const texto = input.value.trim().toLowerCase();
+      let visibles = 0;
+
+      endpoints.forEach((ep) => {
+        const coincideMetodo = !metodoActivo || ep.dataset.metodo === metodoActivo;
+        const coincideTexto = !texto || ep.textContent.toLowerCase().includes(texto);
+        const seVe = coincideMetodo && coincideTexto;
+        ep.hidden = !seVe;
+        if (seVe) visibles++;
+      });
+
+      /* Oculta los apartados que se quedan sin endpoints visibles */
+      document.querySelectorAll(".grupo-endpoints").forEach((grupo) => {
+        grupo.hidden = !grupo.querySelector(".ep:not([hidden])");
+      });
+
+      contador.innerHTML = `<b>${visibles}</b> endpoint${visibles === 1 ? "" : "s"}`;
+      vacio.hidden = visibles > 0;
+    }
+
+    input.addEventListener("input", filtrar);
+
+    botones.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        botones.forEach((b) => b.classList.remove("activo"));
+        btn.classList.add("activo");
+        metodoActivo = btn.dataset.metodo;
+        filtrar();
+      });
+    });
+
+    filtrar();
+  </script>
+</body>
+</html>

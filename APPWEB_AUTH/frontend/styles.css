@@ -712,3 +712,209 @@ textarea { resize: vertical; min-height: 96px; }
   .usuario-rol { display: none; }
   .fila-acciones { width: 100%; justify-content: flex-end; }
 }
+
+/* ============================================================
+   Páginas de documentación (documentacion.html / api.html)
+   ============================================================ */
+.doc-envoltorio {
+  max-width: 1500px; margin: 0 auto;
+  padding: clamp(18px, 4vw, 40px);
+}
+
+/* Cabecera de las páginas de docs: marca + navegación */
+.doc-topbar {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 12px clamp(16px, 4vw, 40px);
+  background: var(--blanco); border-bottom: 2px solid var(--linea);
+  box-shadow: 0 2px 0 rgba(52, 48, 74, .04);
+}
+.doc-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; align-items: center; }
+.doc-nav a {
+  font-size: 13px; font-weight: 800; color: var(--tinta-suave);
+  padding: 8px 14px; border-radius: 999px; border: 2px solid transparent;
+  transition: color .2s, background .2s, border-color .2s;
+}
+.doc-nav a:hover { color: var(--tinta); background: var(--crema-2); text-decoration: none; }
+.doc-nav a.doc-nav-activo {
+  color: #fff; background: var(--uva); border-color: var(--uva);
+  box-shadow: 0 3px 0 rgba(91, 75, 214, .40);
+}
+
+/* Contenido principal: índice lateral + cuerpo */
+.doc-cuerpo { display: grid; grid-template-columns: 250px 1fr; gap: 26px; align-items: start; }
+.doc-indice {
+  position: sticky; top: 84px; padding: 18px 16px;
+  max-height: calc(100vh - 110px); overflow-y: auto;
+}
+.doc-indice h3 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--tinta-suave); }
+.doc-indice ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.doc-indice a {
+  display: block; font-size: 13px; font-weight: 700; color: var(--tinta-suave);
+  padding: 7px 10px; border-radius: 9px; border-left: 3px solid transparent;
+}
+.doc-indice a:hover { color: var(--uva); background: var(--uva-t); text-decoration: none; }
+
+.doc-contenido { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.doc-seccion { padding: 26px 28px; scroll-margin-top: 84px; }
+.doc-seccion > h2 {
+  margin: 0 0 6px; font-size: 21px; display: flex; align-items: center; gap: 10px;
+}
+.doc-seccion > .doc-lead { margin: 0 0 18px; color: var(--tinta-suave); line-height: 1.6; }
+.doc-seccion h3 { margin: 22px 0 10px; font-size: 16px; }
+.doc-seccion p { line-height: 1.65; color: #4C4763; }
+.doc-seccion ul, .doc-seccion ol { line-height: 1.7; color: #4C4763; padding-left: 22px; }
+.doc-seccion li { margin-bottom: 4px; }
+
+/* Colores de borde por sección (mismo reparto que los paneles de stats) */
+.doc-seccion:nth-of-type(4n+1) { border-top: 6px solid var(--uva); }
+.doc-seccion:nth-of-type(4n+2) { border-top: 6px solid var(--menta); }
+.doc-seccion:nth-of-type(4n+3) { border-top: 6px solid var(--limon); }
+.doc-seccion:nth-of-type(4n+4) { border-top: 6px solid var(--frambuesa); }
+
+/* Bloques de código */
+.codigo {
+  display: block; overflow-x: auto; white-space: pre;
+  font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+  font-size: 13px; line-height: 1.65; color: #38334F;
+  background: var(--crema); border: 2px solid var(--linea); border-radius: var(--radio-sm);
+  padding: 14px 16px; margin: 10px 0;
+}
+.codigo .c-com  { color: #8A82A0; }
+.codigo .c-clave{ color: #7A3EA8; }
+.codigo .c-str  { color: #0F8C72; }
+
+/* Callouts */
+.nota-doc {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px 16px; border-radius: var(--radio-sm); font-size: 13.5px;
+  line-height: 1.6; margin: 14px 0;
+  background: var(--cielo-t); border: 2px solid #BBDCEF; color: #16679F;
+}
+.nota-doc.aviso { background: var(--limon-t); border-color: #EBD68C; color: #7A5E00; }
+.nota-doc.peligro { background: var(--rojo-t); border-color: #F3C4B8; color: #A83A26; }
+.nota-doc b { font-weight: 800; }
+
+/* Tablas de documentación */
+.tabla-doc { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 10px 0; }
+.tabla-doc th {
+  text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .7px;
+  color: var(--tinta-suave); padding: 8px 12px; border-bottom: 2px solid var(--linea);
+}
+.tabla-doc td { padding: 9px 12px; border-bottom: 1px solid var(--linea); vertical-align: top; color: #4C4763; }
+.tabla-doc tr:last-child td { border-bottom: none; }
+.tabla-doc code {
+  font-family: "Cascadia Code", Consolas, monospace; font-size: 12.5px;
+  background: var(--crema-2); padding: 2px 7px; border-radius: 7px; color: #4B3EB8;
+}
+.tabla-doc td:first-child { font-weight: 700; color: var(--tinta); white-space: nowrap; }
+
+/* Filtros del buscador de endpoints */
+.ep-filtros {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  padding: 14px; margin-bottom: 20px;
+}
+.ep-filtros .campo-buscar { flex: 1 1 260px; }
+.metodo-filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+.metodo-filtro {
+  font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+  padding: 8px 13px; border-radius: 999px;
+  border: 2px solid var(--linea); background: var(--blanco); color: var(--tinta-suave);
+  transition: all .18s;
+}
+.metodo-filtro:hover { color: var(--tinta); border-color: var(--uva); }
+.metodo-filtro.activo { background: var(--uva); border-color: var(--uva); color: #fff;
+  box-shadow: 0 3px 0 rgba(91, 75, 214, .40); }
+.ep-contador { font-size: 13px; color: var(--tinta-suave); margin-left: auto; }
+.ep-contador b { color: var(--tinta); }
+
+/* Cada endpoint */
+.grupo-endpoints { display: flex; flex-direction: column; gap: 14px; }
+.grupo-titulo {
+  display: flex; align-items: center; gap: 10px; margin: 14px 0 2px;
+  font-size: 17px; scroll-margin-top: 84px;
+}
+.grupo-titulo .grupo-ruta {
+  font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; font-weight: 700;
+  color: var(--tinta-suave); background: var(--crema-2); padding: 4px 10px; border-radius: 999px;
+}
+.ep {
+  padding: 16px 18px; border-radius: var(--radio);
+  background: var(--blanco); border: 2px solid var(--linea);
+  box-shadow: 0 4px 0 rgba(52, 48, 74, .06);
+  scroll-margin-top: 84px;
+}
+.ep-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ep-ruta {
+  font-family: "Cascadia Code", Consolas, monospace; font-size: 13.5px; font-weight: 700;
+  color: var(--tinta); word-break: break-all;
+}
+.ep-desc { margin: 8px 0 0; font-size: 13.5px; color: var(--tinta-suave); line-height: 1.6; }
+
+/* Insignias de método HTTP */
+.metodo {
+  font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+  padding: 4px 11px; border-radius: 999px; flex: 0 0 auto;
+}
+.m-get    { background: var(--menta-t);     color: #0F7A5F; }
+.m-post   { background: var(--uva-t);       color: #4B3EB8; }
+.m-put    { background: var(--cielo-t);     color: #16679F; }
+.m-patch  { background: var(--limon-t);     color: #8A6A00; }
+.m-delete { background: var(--rojo-t);      color: #C0392B; }
+
+/* Insignia de permiso requerido */
+.acceso {
+  font-size: 11px; font-weight: 800; padding: 4px 11px; border-radius: 999px;
+  margin-left: auto; flex: 0 0 auto;
+}
+.acc-publico  { background: var(--menta-t); color: #0F7A5F; }
+.acc-usuario  { background: var(--crema-2); color: var(--tinta-suave); }
+.acc-gestor   { background: var(--cielo-t); color: #16679F; }
+.acc-admin    { background: var(--uva-t);   color: #3D2FA8; }
+
+/* Desplegables: parámetros / cuerpo / respuesta */
+.ep-detalle { margin-top: 10px; }
+.ep-detalle > summary {
+  cursor: pointer; font-size: 12.5px; font-weight: 800; color: var(--uva);
+  user-select: none; list-style: none; display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px; border: 2px solid var(--linea);
+  background: var(--blanco); transition: all .18s;
+}
+.ep-detalle > summary:hover { border-color: var(--uva); background: var(--uva-t); }
+.ep-detalle > summary::before { content: "▸"; transition: transform .2s; }
+.ep-detalle[open] > summary::before { transform: rotate(90deg); }
+.ep-detalle[open] > summary { background: var(--uva-t); border-color: var(--uva); }
+.ep-detalle .codigo { margin-bottom: 4px; }
+.ep-detalle h4 {
+  margin: 14px 0 4px; font-size: 12px; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--tinta-suave);
+}
+
+/* Hero compacto de las páginas de docs */
+.doc-hero { padding: 26px 28px; }
+.doc-hero h1 { margin: 0 0 6px; font-size: clamp(22px, 3vw, 30px); }
+.doc-hero p { margin: 0; color: var(--tinta-suave); max-width: 72ch; line-height: 1.65; }
+.doc-hero-acciones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.doc-version {
+  display: inline-block; font-size: 11.5px; font-weight: 800; vertical-align: middle;
+  background: var(--uva-t); color: #4B3EB8; padding: 4px 12px; border-radius: 999px;
+  margin-left: 10px;
+}
+
+/* Rejilla de tarjetas de "apartados" dentro de la documentación */
+.doc-tarjetas {
+  display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+.doc-tarjeta {
+  padding: 14px 16px; border-radius: var(--radio-sm);
+  background: var(--crema); border: 2px solid var(--linea);
+}
+.doc-tarjeta b { display: block; font-size: 13.5px; color: var(--tinta); margin-bottom: 3px; }
+.doc-tarjeta span { font-size: 12.5px; color: var(--tinta-suave); line-height: 1.5; }
+
+@media (max-width: 900px) {
+  .doc-cuerpo { grid-template-columns: 1fr; }
+  .doc-indice { position: static; max-height: none; }
+  .doc-indice ul { flex-direction: row; flex-wrap: wrap; }
+}
