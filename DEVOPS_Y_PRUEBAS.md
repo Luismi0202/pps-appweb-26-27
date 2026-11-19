@@ -204,8 +204,26 @@ servicio):
 | Build command | `pip install -r requirements.txt` |
 | Start command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Health check path | `/api/salud` (recomendado) |
-| Variables de entorno | `LUDOTECA_SECRET_KEY` (clave propia, **no** la de desarrollo) |
+| Variables de entorno | Ver la tabla siguiente |
 | Auto-deploy | Activado sobre `main` |
+
+Variables de entorno (*Environment*) para la versión actual:
+
+| Variable | Valor | Obligatoria |
+|----------|-------|:-----------:|
+| `LUDOTECA_SECRET_KEY` | Clave larga y aleatoria propia (**no** la de desarrollo) | Sí |
+| `LUDOTECA_PROXIES_CONFIABLES` | `1` (Render pone un proxy delante: sin esto la protección anti-DDoS vería a todos los visitantes como una sola IP; §7.2) | **Sí** |
+| `LUDOTECA_PUBLIC_URL` | `https://pps-appweb-26-27-sju7.onrender.com` (URL de vuelta del login social y cookie `Secure`) | Con login social |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Los que da Google Cloud Console al crear el ID de cliente OAuth | Para el botón de Google |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Los que da GitHub al crear la OAuth App | Para el botón de GitHub |
+
+Las URL de vuelta que hay que registrar en Google y GitHub, y cómo conseguir
+los ID y secretos, están en el [README de la app](./APPWEB_AUTH/README.md#login-y-registro-con-google-o-github).
+Los secretos solo van en Render, nunca en el repositorio.
+
+> ⚠️ Render despliega desde el repositorio `PERSONAL`. Subir a `origin` (el del
+> IES) lanza el CI pero **no** actualiza la web publicada: hay que hacer también
+> `git push PERSONAL main` (§3.1).
 
 > Si se quisiera tener esta configuración como código (*Infrastructure as
 > Code*), se podría añadir un `render.yaml` (Blueprint) al repositorio; ahora
@@ -262,14 +280,14 @@ que cambie la URL.
 Al incorporar el login social se añadieron dos grupos de pruebas, que corren
 con el mismo `python -m pytest`:
 
-- `tests/oauth/test_oauth.py` (18 pruebas, ~7 s): la app real con
+- [`tests/oauth/test_oauth.py`](./APPWEB_AUTH/tests/oauth/test_oauth.py) (18 pruebas, ~7 s): la app real con
   `TestClient` y BD temporal, **simulando** Google y GitHub (se sustituye la
   función que les hace las peticiones). Cubre la redirección al proveedor,
   alta de usuario nuevo, reutilización y vinculación por email, que los JWT
   emitidos funcionan en `/api/auth/yo`, colecciones y refresh, email sin
   verificar, `state` manipulado / de otro proveedor / sin cookie (CSRF),
   cancelación, cookie `Secure` en https, proveedor desconocido o sin configurar y borrado en cascada.
-- `tests/funcionales/test_oauth_navegador.py` (5 pruebas Selenium): botones
+- [`tests/funcionales/test_oauth_navegador.py`](./APPWEB_AUTH/tests/funcionales/test_oauth_navegador.py) (5 pruebas Selenium): botones
   ocultos sin configuración y visibles (con su enlace) con ella, que el botón
   lleva a `github.com/login/oauth/authorize`, y que la vuelta
   `#oauth=<tokens>` entra al panel (y limpia la URL) y `#oauth_error=` muestra
@@ -280,6 +298,13 @@ Resultado: **41 de 41 pruebas pasan** (18 OAuth + 23 Selenium) y
 BD real del repositorio (la tabla `cuentas_oauth` se crea sola y no se pierde
 ningún usuario). El viaje real a Google/GitHub no se automatiza porque exige
 cuentas y credenciales reales: se prueba a mano una vez configuradas.
+
+#### Total de la suite automática
+
+Con las 12 pruebas anti-DDoS de la §7, `python -m pytest` ejecuta **53
+pruebas** (12 anti-DDoS + 18 OAuth + 23 Selenium), además de las 110
+comprobaciones de `probar_api.py`. Todas pasan en local y en GitHub Actions
+(§8).
 
 ### 4.3 Cómo ejecutarlas
 
@@ -385,6 +410,7 @@ temporal (`servidor_aislado.py`), en el mismo PC que Locust:
 | 3b. Estrés intermedio | 200 | 20/s | 120 s | 1 | Acotar dónde empieza a fallar (añadido tras ver el 3) |
 | 3c. Repetición del 3 | 300 | 20/s | 120 s | 1 | Confirmar que el fallo es reproducible |
 | 4. Estrés escalado | 300 | 20/s | 120 s | 4 (`--workers 4`) | ¿Mejora escalando procesos? |
+| 7. Estrés con `--limit-concurrency 30` | 300 | 20/s | 120 s | 1 | ¿Evita el bloqueo limitar las conexiones en Uvicorn? |
 
 **Equipo de pruebas:** Windows 11, Python 3.13, Uvicorn 0.54, Locust 2.47; Locust y la API en la misma máquina (red local `127.0.0.1`).
 
@@ -429,12 +455,13 @@ tiempos) de cada ejecución están en
 
 | Escenario | Peticiones | Fallos | Mediana | p95 | p99 | Máximo | Rendimiento |
 |-----------|-----------:|-------:|--------:|----:|----:|-------:|------------:|
-| 1. Normal (20 u.) | 710 | **0 (0 %)** | 10 ms | 220 ms | 240 ms | 268 ms | 12,2 req/s |
-| 2. Alta (100 u.) | 5 058 | **0 (0 %)** | 15 ms | 210 ms | 270 ms | 375 ms | 57,1 req/s |
-| 3b. Estrés (200 u.) | 13 490 | **0 (0 %)** | 32 ms | 240 ms | 370 ms | 869 ms | 113,6 req/s |
-| 3. Estrés (300 u., 1 proceso) | 890 | **115 (12,9 %)** | 220 ms | 60 000 ms | 89 000 ms | 90 617 ms | 8,8 req/s |
-| 3c. Repetición (300 u., 1 proceso) | 1 274 | **114 (8,9 %)** | 240 ms | 60 000 ms | 90 000 ms | ≈ 90 000 ms | 12,4 req/s |
-| 4. Estrés (300 u., 4 procesos) | 19 482 | **1 (0,005 %)** | 20 ms | 260 ms | 1 300 ms | 3 733 ms | 164,1 req/s |
+| [1. Normal (20 u.)](./APPWEB_AUTH/tests/estres/resultados/1_carga_normal.html) | 710 | **0 (0 %)** | 10 ms | 220 ms | 240 ms | 268 ms | 12,2 req/s |
+| [2. Alta (100 u.)](./APPWEB_AUTH/tests/estres/resultados/2_carga_alta.html) | 5 058 | **0 (0 %)** | 15 ms | 210 ms | 270 ms | 375 ms | 57,1 req/s |
+| [3b. Estrés (200 u.)](./APPWEB_AUTH/tests/estres/resultados/3b_estres_200.html) | 13 490 | **0 (0 %)** | 32 ms | 240 ms | 370 ms | 869 ms | 113,6 req/s |
+| [3. Estrés (300 u., 1 proceso)](./APPWEB_AUTH/tests/estres/resultados/3_estres.html) | 890 | **115 (12,9 %)** | 220 ms | 60 000 ms | 89 000 ms | 90 617 ms | 8,8 req/s |
+| [3c. Repetición (300 u., 1 proceso)](./APPWEB_AUTH/tests/estres/resultados/3c_estres_300_repeticion.html) | 1 274 | **114 (8,9 %)** | 240 ms | 60 000 ms | 90 000 ms | ≈ 90 000 ms | 12,4 req/s |
+| [4. Estrés (300 u., 4 procesos)](./APPWEB_AUTH/tests/estres/resultados/4_estres_4workers.html) | 19 482 | **1 (0,005 %)** | 20 ms | 260 ms | 1 300 ms | 3 733 ms | 164,1 req/s |
+| [7. Estrés (300 u., `--limit-concurrency 30`)](./APPWEB_AUTH/tests/estres/resultados/7_estres_300_limit_concurrency.html) | 18 325 | **17 720 (96,7 %)** | 10 ms | 39 ms | 90 ms | 1 281 ms | 154,2 req/s |
 
 > El p95 de los escenarios 1–3b ronda los 220–240 ms solo por el **login y el
 > registro** (bcrypt, ver abajo); quitándolos, las lecturas del catálogo
@@ -524,11 +551,283 @@ se ha sorteado creando antes la BD con un solo proceso
 hacer el *seed* tolerante a esa carrera o ejecutarlo como paso previo al
 arranque.
 
-**6. Qué significa para el despliegue en Render.** Las pruebas se hicieron en
+**6. Limitar conexiones en Uvicorn no es la solución (escenario 7).** Se
+probó a arrancar con `--limit-concurrency 30`, para que nunca hubiera más
+trabajo a la vez del que caben hilos y conexiones. El servidor **ya no se
+bloquea**: ningún `QueuePool` en el log y respuestas en milisegundos. Pero
+**rechaza el 96,7 % de las peticiones con 503**, y de rebote muchas con 401,
+porque los logins rechazados dejan a los usuarios sin token. El motivo es
+que Uvicorn cuenta las **conexiones abiertas**, no las peticiones en curso, y
+cada usuario de Locust (como un navegador) mantiene su conexión abierta
+(*keep-alive*): con 300 usuarios conectados casi todos quedan por encima del
+límite. Conclusión: evita la caída, pero a costa de dejar fuera a casi todos.
+El arreglo de verdad es el del pool de conexiones (§9.2) o escalar procesos
+(escenario 4).
+
+**7. Qué significa para el despliegue en Render.** Las pruebas se hicieron en
 un PC con varios núcleos. El plan Free de Render tiene **0,1 CPU**, así que los
 límites reales allí serán bastante más bajos (sobre todo en login, que es
 CPU pura). Para una clase o una demo (decenas de usuarios) va bien; para
 cientos de usuarios simultáneos habría que aplicar las mejoras de §9.
+
+---
+
+## 6. Pruebas de carga en producción (Render)
+
+### 6.1 Enfoque y precauciones
+
+El enunciado pide repartir el estrés entre **local** (§5) y **producción**.
+Contra producción no se puede lanzar lo mismo que en local: es el servicio
+público, en el plan Free (0,1 CPU, se duerme a los 15 minutos), con la base de
+datos de demostración. Por eso el perfil de producción,
+[`tests/estres/locustfile_produccion.py`](./APPWEB_AUTH/tests/estres/locustfile_produccion.py),
+está hecho para **no hacer daño ni ensuciar datos**:
+
+- **No inicia sesión ni escribe nada**: hace lo que un visitante anónimo
+  (pantalla de login con su CSS y JS, panel, portada de la API,
+  `/openapi.json`, `/api/salud`).
+- Pide el catálogo **sin token** y espera un **401**, que se cuenta como
+  correcto: es la respuesta esperada y ejercita la capa de autenticación.
+- Pausas de 2–5 s entre acciones (visitantes realistas, no una inundación).
+- Si se definen `LUDOTECA_PROD_EMAIL` y `LUDOTECA_PROD_PASSWORD`, cada usuario
+  entra con esa cuenta y navega por el catálogo (solo lecturas). Está pensado
+  para lanzarlo con una cuenta de pruebas propia; **no se ha usado** para
+  este documento, para no meter credenciales en el despliegue real.
+
+Además, [`tests/ddos/rafaga.py`](./APPWEB_AUTH/tests/ddos/rafaga.py) lanza una
+ráfaga corta desde una sola máquina para ver **si el hosting frena** un pico de
+peticiones (ver también §7).
+
+### 6.2 Cómo ejecutarlas
+
+Primero hay que **despertar** el servicio (la primera petición tras dormir
+tarda ~30–60 s):
+
+```powershell
+curl.exe https://pps-appweb-26-27-sju7.onrender.com/api/salud
+```
+
+Carga con 10 y 30 visitantes (desde la carpeta `APPWEB_AUTH`):
+
+```powershell
+locust -f tests/estres/locustfile_produccion.py --host https://pps-appweb-26-27-sju7.onrender.com --headless -u 10 -r 1 -t 60s --csv tests/estres/resultados/8_produccion_10_usuarios --html tests/estres/resultados/8_produccion_10_usuarios.html
+```
+
+```powershell
+locust -f tests/estres/locustfile_produccion.py --host https://pps-appweb-26-27-sju7.onrender.com --headless -u 30 -r 2 -t 120s --csv tests/estres/resultados/9_produccion_30_usuarios --html tests/estres/resultados/9_produccion_30_usuarios.html
+```
+
+Ráfaga de 300 peticiones, 20 a la vez:
+
+```powershell
+python tests/ddos/rafaga.py https://pps-appweb-26-27-sju7.onrender.com/api/salud -n 300 -c 20
+```
+
+### 6.3 Resultados obtenidos
+
+Ejecutadas el 19/11/2026 desde un PC doméstico en España contra la versión
+desplegada en ese momento: la de octubre, **sin** el login social ni la
+protección anti-DDoS, porque el repositorio `PERSONAL` aún no se había
+actualizado (ver §3.1).
+
+| Escenario | Usuarios | Duración | Peticiones | Fallos | Mediana | p95 | p99 | Máx | Rendimiento |
+|-----------|:-------:|:--------:|-----------:|-------:|--------:|----:|----:|----:|------------:|
+| [8. Producción ligera](./APPWEB_AUTH/tests/estres/resultados/8_produccion_10_usuarios.html) | 10 | 60 s | 231 | **0** | 200 ms | 350 ms | 610 ms | 769 ms | 4,0 req/s |
+| [9. Producción media](./APPWEB_AUTH/tests/estres/resultados/9_produccion_30_usuarios.html) | 30 | 120 s | 1 488 | **0** | 200 ms | 280 ms | 460 ms | 967 ms | 12,5 req/s |
+
+Por petición (escenario 9):
+
+| Petición | Nº | Mediana | p95 |
+|----------|---:|--------:|----:|
+| `GET /panel/login.html` | 248 | 200 ms | 280 ms |
+| `GET /panel/styles.css` | 246 | 200 ms | 290 ms |
+| `GET /panel/auth.js` | 246 | 200 ms | 250 ms |
+| `GET /panel/` y `app.js` | 238 | 200 ms | 270–380 ms |
+| `GET /api/salud` | 182 | 190 ms | 240 ms |
+| `GET /api/videojuegos` sin token → 401 | 189 | 200 ms | 280 ms |
+| `GET /` | 73 | 200 ms | 280 ms |
+| `GET /openapi.json` | 66 | 200 ms | 270 ms |
+
+**Ráfaga de 300 peticiones a `/api/salud` (20 a la vez):**
+
+```
+300 peticiones, 20 a la vez -> https://pps-appweb-26-27-sju7.onrender.com/api/salud
+  duración 5.0 s · 60.6 req/s · mediana 282 ms · p95 431 ms · máx 781 ms
+  200: 300
+```
+
+**Análisis:**
+
+1. **Producción aguanta sin errores** con 10 y 30 visitantes simultáneos.
+2. Los **~200 ms de mediana son casi todo red** (ida y vuelta España ↔
+   servidores de Render, más TLS): en local las mismas rutas tardan 3–10 ms.
+   Al pasar de 10 a 30 usuarios la mediana no sube, así que el servidor no
+   está cerca de su límite con este tráfico.
+3. Las peticiones de la prueba son ligeras (estáticos, salud, 401). Lo que
+   saturaría antes los 0,1 CPU del plan Free es el **login** (bcrypt, ~0,25 s
+   de CPU en un PC y bastante más con 0,1 CPU). No se ha forzado en
+   producción a propósito.
+4. La **ráfaga** de 300 peticiones en 5 s desde una sola IP pasó entera (300 ×
+   200, ningún 429): **ni la app desplegada ni Render limitaron** ese pico.
+   Render tiene protección de red frente a ataques volumétricos, pero no
+   limita el ritmo de un cliente a este nivel. Es justo lo que cubre la
+   protección de la §7 una vez desplegada.
+
+> 🔁 **Para repetir tras desplegar la versión nueva:** con la protección
+> activa y `LUDOTECA_PROXIES_CONFIABLES=1`, la misma ráfaga de 300 debería dar
+> **300 × 200** (el límite es 300 por minuto e IP), y una de **400** debería
+> devolver **429** en las últimas ~100.
+
+---
+
+## 7. Protección y pruebas anti-DDoS
+
+### 7.1 El problema
+
+Las pruebas anteriores dejaron claro que, **tal como estaba**, la aplicación
+era fácil de tumbar o de atacar:
+
+- Nada limitaba cuántas peticiones podía hacer un mismo cliente: con 300
+  usuarios la API se bloqueaba (§5.4) y la ráfaga de producción pasó entera
+  (§6.3).
+- El **login** no tenía límite de intentos: se podían probar contraseñas sin
+  freno (**fuerza bruta**). Además, cada intento cuesta un bcrypt (~0,25–0,5 s
+  de CPU), así que unos pocos atacantes bastan para acaparar la CPU (**DoS de
+  capa de aplicación**).
+- No había límite de tamaño de las peticiones.
+
+### 7.2 La protección añadida
+
+[`app/anti_ddos.py`](./APPWEB_AUTH/app/anti_ddos.py) es un *middleware* ASGI
+que se ejecuta **antes** que cualquier endpoint. Se registra en `main.py` justo
+antes de CORS. Rechazar una petición le cuesta ~7 ms, sin tocar la base de
+datos ni el *threadpool*.
+
+| Defensa | Límite por defecto | Respuesta | Contra qué |
+|---------|-------------------|-----------|------------|
+| Peticiones por IP | 300 por minuto | **429** + `Retry-After` | Inundación desde un mismo origen |
+| Intentos de login, registro y OAuth por IP | 20 por minuto | **429** + `Retry-After` | Fuerza bruta y abuso del bcrypt |
+| Tamaño del cuerpo | 1 MB | **413** | Peticiones enormes que consumen memoria |
+
+- Es una **ventana deslizante** de 60 s por IP, en memoria del proceso.
+- `refresh` y la lista de proveedores **no** cuentan como intento de login:
+  el panel renueva la sesión sin ser castigado.
+- **IP real detrás de un proxy:** con `LUDOTECA_PROXIES_CONFIABLES=0` (por
+  defecto) se usa la IP de la conexión y **se ignora `X-Forwarded-For`**, que
+  cualquiera puede inventarse. Detrás de Render hay que poner `1`: entonces se
+  toma la IP que **añade el propio proxy** (la última de la cabecera), no la
+  que pueda poner el atacante delante.
+- Todo es configurable por variables de entorno (§2.4), y
+  `LUDOTECA_ANTI_DDOS=0` lo desactiva.
+- **Límites conocidos:** los contadores son de cada proceso (con
+  `--workers 4` el límite efectivo es ×4), y esto no para un **DDoS
+  volumétrico** de miles de IPs: eso corresponde a la red del hosting
+  (Render/Cloudflare) o a un WAF. Esta capa protege la aplicación del abuso
+  desde pocos orígenes, que es lo que se puede probar y controlar desde el
+  código.
+
+> ⚠️ **En Render es obligatorio** definir `LUDOTECA_PROXIES_CONFIABLES=1` antes
+> de desplegar esta versión. Si no, la app ve a **todos** los visitantes con la
+> IP del proxy y aplica los límites a todo el mundo junto (20 logins por
+> minuto en total).
+
+### 7.3 Pruebas
+
+Hay tres tipos de prueba, de la más rápida a la más realista.
+
+**a) Pruebas automáticas**, en [`tests/ddos/test_anti_ddos.py`](./APPWEB_AUTH/tests/ddos/test_anti_ddos.py)
+(12 pruebas, ~10 s). Se ejecutan con `python -m pytest` y en el CI. Montan el
+*middleware* real sobre una mini-app para poder lanzar cientos de peticiones
+en milisegundos:
+
+| Prueba | Comprueba |
+|--------|-----------|
+| `test_inundacion_desde_una_ip_recibe_429` | Pasan 300 peticiones y de la 301 en adelante, 429 |
+| `test_el_429_lleva_retry_after_y_mensaje` | El 429 dice cuánto esperar y por qué |
+| `test_limite_configurable` | `LUDOTECA_LIMITE_GENERAL` cambia el límite |
+| `test_se_recupera_al_pasar_la_ventana` | Pasado un minuto se vuelve a atender (reloj simulado) |
+| `test_fuerza_bruta_de_login_se_corta_a_los_20_intentos` | 20 intentos de login y luego 429 |
+| `test_bloqueo_de_login_no_afecta_al_resto_de_la_api` | Con el login bloqueado, el resto de la API y el refresh siguen |
+| `test_sin_proxy_no_se_puede_falsear_la_ip` | Cambiar `X-Forwarded-For` no salta el límite |
+| `test_detras_de_proxy_cada_cliente_tiene_su_limite` | Un atacante bloqueado no afecta a otro cliente |
+| `test_detras_de_proxy_se_usa_la_ip_que_anade_el_proxy` | Una IP inventada al principio de la cabecera no sirve |
+| `test_cuerpo_demasiado_grande_413` y `test_cuerpo_normal_pasa` | Límite de 1 MB |
+| `test_se_puede_desactivar` | `LUDOTECA_ANTI_DDOS=0` |
+
+**b) Ataque simulado con Locust**, en [`tests/estres/locustfile_ddos.py`](./APPWEB_AUTH/tests/estres/locustfile_ddos.py)
+(solo en local). Mezcla **50 usuarios legítimos**, cada uno con su IP (simulada
+con `X-Forwarded-For`) y navegando con pausas, y **5 atacantes** desde una
+misma IP (`203.0.113.66`) que, sin pausas, prueban contraseñas en el login e
+inundan el catálogo. Sus peticiones salen como `[ATAQUE]` en las
+estadísticas. Se ejecuta dos veces, con y sin protección:
+
+```powershell
+python tests/servidor_aislado.py --port 8765 --proxies 1 --anti-ddos
+```
+
+```powershell
+locust -f tests/estres/locustfile_ddos.py --host http://127.0.0.1:8765 --headless -u 55 -r 10 -t 60s --csv tests/estres/resultados/6_ddos_con_proteccion --html tests/estres/resultados/6_ddos_con_proteccion.html
+```
+
+Para el caso sin protección, el servidor se arranca sin `--anti-ddos`.
+
+**c) Ráfagas** con [`tests/ddos/rafaga.py`](./APPWEB_AUTH/tests/ddos/rafaga.py)
+contra el servidor local protegido (y contra producción, §6.3):
+
+```powershell
+python tests/ddos/rafaga.py http://127.0.0.1:8765/api/salud -n 400 -c 20
+```
+
+```powershell
+python tests/ddos/rafaga.py http://127.0.0.1:8765/api/auth/login -n 40 -c 5 --post-json '{\"email\":\"admin@ludoteca.local\",\"password\":\"mal\"}'
+```
+
+### 7.4 Resultados obtenidos
+
+**a) Pruebas automáticas:** 12 de 12 pasan, en local y en GitHub Actions.
+
+**b) Ataque simulado** (60 s, 50 legítimos + 5 atacantes):
+
+| | [5. Sin protección](./APPWEB_AUTH/tests/estres/resultados/5_ddos_sin_proteccion.html) | [6. Con protección](./APPWEB_AUTH/tests/estres/resultados/6_ddos_con_proteccion.html) |
+|---|---:|---:|
+| Intentos de contraseña del atacante | 556 | 22 919 |
+| …que **llegaron a comprobarse** (bcrypt) | **556** (todos) | **20** |
+| …cortados con 429 | 0 | **22 899** (~7 ms cada uno) |
+| Tiempo de cada intento del atacante | ~510 ms | ~7 ms |
+| Inundación del catálogo `[ATAQUE] GET` | 193 (401) | 7 500 (7 220 con 429) |
+| **Errores de los usuarios legítimos** | **0** | **0** |
+| Catálogo legítimo (mediana / p95) | 21 / 83 ms | 40 / 100 ms |
+| Login legítimo (mediana) | 590 ms | 650 ms |
+
+**c) Ráfagas en local con la protección activa:**
+
+```
+400 peticiones, 20 a la vez -> /api/salud      ->  200: 298 · 429: 102
+40 peticiones, 5 a la vez   -> /api/auth/login ->  401: 20  · 429: 20
+```
+
+Los 20 primeros intentos llegan al login y dan 401 por contraseña errónea; a
+partir del 21, 429 sin llegar a comprobar la contraseña.
+
+**Comprobación de no regresión:** `probar_api.py` (114 peticiones, 15 de ellas
+de login o registro) pasa entero con la protección **activada**, en 12 s y
+**sin ningún 429**. El uso normal no se ve afectado.
+
+**Análisis:**
+
+1. **La fuerza bruta queda neutralizada:** sin protección el atacante probó
+   556 contraseñas en un minuto (≈ 33 000 por hora); con protección, **20 por
+   minuto**. Además, cada intento rechazado ya no cuesta un bcrypt.
+2. **Los usuarios legítimos no notan el bloqueo**, porque los límites son por
+   IP: 0 errores en los dos casos.
+3. Con la protección, el atacante recibe la respuesta tan rápido (7 ms) que
+   **reintenta mucho más** (22 919 frente a 556 intentos). Esas respuestas son
+   baratas, pero no gratis: la mediana del catálogo legítimo sube de 21 a
+   40 ms. Por eso esta capa es la **última línea**. En un despliegue serio el
+   bloqueo debería hacerse antes, en el proxy, CDN o WAF, y la aplicación
+   quedarse como red de seguridad.
+4. Las ráfagas muestran el límite exacto: ~300 por minuto e IP aceptadas y el
+   resto con 429 + `Retry-After`.
 
 ---
 
@@ -543,7 +842,7 @@ automatiza las pruebas en cada `push` a `main` o *pull request* que toque
               ├ checkout + Python 3.12 + caché pip       ├ servidor aislado :8765
               ├ pip install -r requirements-test.txt     ├ Locust 20 usuarios, 45 s
               ├ servidor aislado :8000 + probar_api.py   ├ --exit-code-on-error 1
-              ├ pytest (Selenium, Chrome headless)       └ artefacto: informe HTML + CSV
+              ├ pytest: anti-DDoS + OAuth + Selenium     └ artefacto: informe HTML + CSV
               └ artefacto: JUnit XML + capturas de fallos
 ```
 
@@ -561,10 +860,30 @@ automatiza las pruebas en cada `push` a `main` o *pull request* que toque
   se desactivaría el *auto-deploy* y se lanzaría el *Deploy Hook* de Render como
   último paso del workflow.
 
-> ⚠️ El workflow se ha escrito y sus pasos se han ejecutado en local (mismos
-> comandos), pero **no se ha visto todavía correr en GitHub**: depende de que
-> GitHub Actions esté habilitado en el repositorio de la organización. Tras el
-> primer push, revisar la pestaña **Actions**.
+- En el servidor aislado del CI la protección anti-DDoS va **desactivada**,
+  porque Locust lanza a todos sus usuarios desde la misma IP. La protección se
+  prueba aparte con sus 12 pruebas, que sí corren en el CI.
+
+#### Resultado en GitHub
+
+Tras el commit `5ed3194` ("Hecho ejercicio 3") subido a `origin`, el workflow
+corrió en GitHub **en verde**:
+
+| Job | Duración | Resultado |
+|-----|---------:|-----------|
+| `api-y-funcionales` | 1 min 42 s | ✅ `probar_api.py` + suite pytest completa |
+| `carga-humo` | 1 min 13 s | ✅ Locust sin errores; artefacto `informe-carga` (310 KB) |
+
+Dejó **2 avisos** (no son fallos): *"Node.js 20 is deprecated"* en
+`actions/checkout@v4`, `actions/setup-python@v5` y `actions/upload-artifact@v4`.
+GitHub está retirando Node 20 y de momento las ejecuta con Node 24. Se quitan
+subiendo esas acciones a sus versiones nuevas (§9.2).
+
+**Cómo verlo:** pestaña **Actions** del repositorio (no *Settings → Secrets and
+variables*, que es para guardar secretos, y este workflow no necesita
+ninguno) → ejecución "Pruebas APPWEB_AUTH" → cada job muestra la salida de
+cada paso, y abajo están los **Artifacts** descargables. Para relanzarlo a
+mano: **Actions** → "Pruebas APPWEB_AUTH" → **Run workflow**.
 
 ---
 
@@ -572,11 +891,13 @@ automatiza las pruebas en cada `push` a `main` o *pull request* que toque
 
 ### 9.1 Conclusiones
 
-- El soporte DevOps tiene ya los tres niveles de prueba automática:
-  **API** (110 comprobaciones), **funcional E2E** (18 casos Selenium) y
-  **rendimiento** (Locust, 3 perfiles), todos reproducibles gracias al
-  **servidor aislado** con BD temporal, y enganchados a un pipeline de
-  **GitHub Actions**.
+- El soporte DevOps cubre todo lo que pide el enunciado:
+  **funcionales** (23 casos Selenium + 110 comprobaciones de API + 18 de
+  OAuth), **estrés en local** (Locust, 3 perfiles y 7 escenarios), **estrés en
+  producción** (Render, 2 escenarios y una ráfaga) y **anti-DDoS**
+  (protección + 12 pruebas + ataque simulado). Todo es reproducible gracias al
+  **servidor aislado** con BD temporal y corre en **GitHub Actions**, que ya ha
+  pasado en verde.
 - **Funcionalmente** la aplicación pasa todas las pruebas.
 - **En rendimiento** aguanta sin errores hasta **200 usuarios simultáneos**
   (≈ 114 req/s) con un proceso, pero **con 300 se bloquea** por el
@@ -584,7 +905,17 @@ automatiza las pruebas en cada `push` a `main` o *pull request* que toque
   FastAPI. Con 4 procesos aguanta 300 usuarios (164 req/s).
 - Las pruebas de estrés han servido para lo que son: **encontrar dos fallos
   que las pruebas funcionales no podían ver** (el bloqueo del pool y la
-  carrera del *seed* con varios procesos).
+  carrera del *seed* con varios procesos). Limitar conexiones en Uvicorn
+  (`--limit-concurrency`) evita el bloqueo, pero rechaza el 97 % del tráfico,
+  así que no es el arreglo.
+- **En producción** (Render Free) la app atiende 30 visitantes simultáneos
+  sin errores; los ~200 ms de respuesta son casi todo red. La versión
+  desplegada no limitaba nada: una ráfaga de 300 peticiones pasó entera.
+- **Frente a DDoS** la nueva protección corta la fuerza bruta del login de
+  556 a **20 intentos por minuto** y responde 429 en ~7 ms, sin errores para
+  los usuarios legítimos y sin afectar al uso normal (`probar_api.py` pasa
+  sin ningún 429). No sustituye a la protección de red del hosting frente a
+  ataques volumétricos desde miles de IPs.
 
 ### 9.2 Mejoras propuestas
 
@@ -593,7 +924,10 @@ automatiza las pruebas en cada `push` a `main` o *pull request* que toque
 | Alta | Ajustar el pool en `database.py` (p. ej. `pool_size=20, max_overflow=30, pool_timeout=10`) o, al ser SQLite, usar `NullPool` | Que haya al menos tantas conexiones como hilos (40) y desaparezca el bloqueo; un timeout más corto hace que, si satura, falle rápido en vez de colgarse 30 s. |
 | Alta | Hacer el *seed* seguro con varios procesos (capturar `IntegrityError` en `asegurar_admin`, o ejecutarlo antes de arrancar Uvicorn) | Permite usar `--workers N` sin preparar la BD a mano. |
 | Media | Activar `PRAGMA journal_mode=WAL` en SQLite | Lecturas y una escritura a la vez; baja el p99 con varios procesos. |
-| Media | Limitar intentos de login por IP (*rate limiting*) | El login con bcrypt es el endpoint más caro: además de seguridad, protege la CPU. |
+| ✅ Hecha | Limitar intentos de login y peticiones por IP (*rate limiting*) | Aplicada en `app/anti_ddos.py` (§7). |
+| Alta | Desplegar la versión nueva en Render con `LUDOTECA_PROXIES_CONFIABLES=1` y repetir la ráfaga de la §6 | Comprobar en producción que la protección responde 429 y que no bloquea a usuarios distintos. |
+| Media | Guardar los contadores anti-DDoS en Redis (o similar) en vez de en memoria | Que el límite sea común a todos los procesos (`--workers N`) y sobreviva a reinicios. |
+| Baja | Subir las acciones del workflow (`checkout`, `setup-python`, `upload-artifact`) a sus versiones para Node 24 | Quitar los avisos de Node 20 del CI. |
 | Media | Desplegar con `--workers` acorde a la CPU y disco persistente / PostgreSQL | Lo que se ve en el escenario 4 y en la [comparativa](./COMPARATIVA_PRESUPUESTOS_APLICACION_WEB_DESPLEGADA.md). |
 | Baja | `render.yaml` en el repo y *Deploy Hook* al final del workflow | Infraestructura como código y despliegue solo si pasan las pruebas. |
 | Baja | Dejar de versionar `__pycache__/` (ya se ignora en `APPWEB_AUTH/.gitignore`, pero hay `.pyc` subidos de antes) | Limpieza del repositorio. |
