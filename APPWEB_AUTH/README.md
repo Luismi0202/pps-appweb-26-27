@@ -161,6 +161,69 @@ curl -X POST http://localhost:8000/api/auth/cambiar-password \
   cambio devuelve un par de tokens nuevo, así que quien lo hace sigue
   dentro sin interrupciones.
 
+### Login y registro con Google o GitHub
+
+Además del email y la contraseña, en `/panel/login.html` se puede **entrar o
+crear la cuenta con Google o con GitHub** ("Continuar con…"). Es solo otra
+forma de iniciar sesión: al terminar, la API emite **los mismos JWT** (access +
+refresh con la `token_version` de la cuenta) que `POST /api/auth/login`, así
+que el panel, el refresh, los roles y todo lo demás funcionan igual.
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/auth/oauth/proveedores` | Qué proveedores están configurados (`{"google": true, "github": false}`) |
+| GET | `/api/auth/oauth/{google\|github}/login` | Redirige al proveedor (ábrelo en el navegador) |
+| GET | `/api/auth/oauth/{google\|github}/callback` | Vuelta desde el proveedor; redirige al panel con la sesión |
+
+Cómo decide la cuenta:
+
+1. Si esa cuenta de Google/GitHub ya se usó antes → entra en el mismo usuario.
+2. Si no, pero ya existe un usuario con ese **email verificado** → se vincula
+   a él (conserva su rol, colección y contraseña). Así una misma persona puede
+   entrar con contraseña, con Google y con GitHub.
+3. Si no existe → se crea un usuario nuevo con rol `usuario` y colección vacía.
+   No tiene contraseña conocida; si la quiere, un admin puede restablecérsela.
+
+Se rechaza si el proveedor no da un email verificado. El `state` va firmado
+y atado a una cookie `HttpOnly` del navegador (protección CSRF) y los tokens
+vuelven en el fragmento `#` de la URL, que no se envía a ningún servidor y
+`frontend/oauth.js` borra al guardarlos. Los vínculos se guardan en la tabla
+nueva `cuentas_oauth`, que se crea sola al arrancar (sin migraciones) y se
+borra en cascada con el usuario.
+
+**Configuración** (variables de entorno; si un proveedor no está configurado,
+su botón simplemente no aparece):
+
+| Variable | Valor |
+|----------|-------|
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | De Google Cloud Console |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | De la OAuth App de GitHub |
+| `LUDOTECA_PUBLIC_URL` | URL pública sin `/` final, p. ej. `https://pps-appweb-26-27-sju7.onrender.com` (en local no hace falta) |
+
+- **Google:** <https://console.cloud.google.com> → *APIs y servicios* →
+  *Credenciales* → *Crear credenciales* → *ID de cliente de OAuth* → tipo
+  *Aplicación web*. En **URI de redirección autorizados** añade
+  `http://localhost:8000/api/auth/oauth/google/callback` y
+  `https://<tu-app>.onrender.com/api/auth/oauth/google/callback`. (La pantalla
+  de consentimiento en modo *Testing* solo deja entrar a los usuarios de
+  prueba que añadas.)
+- **GitHub:** <https://github.com/settings/developers> → *OAuth Apps* →
+  *New OAuth App*. *Homepage URL*: la de la app; *Authorization callback URL*:
+  `https://<tu-app>.onrender.com/api/auth/oauth/github/callback`. GitHub solo
+  admite una URL de vuelta por app: crea otra para local con
+  `http://localhost:8000/api/auth/oauth/github/callback`.
+- En **Render**: *Environment* → añade las variables de arriba y redespliega.
+
+En local (PowerShell):
+
+```powershell
+$env:GITHUB_CLIENT_ID="..."; $env:GITHUB_CLIENT_SECRET="..."; python -m uvicorn app.main:app --port 8000
+```
+
+> Usa `http://localhost:8000` (no `127.0.0.1`) en el navegador: la URL de vuelta
+> se construye con el mismo host por el que entras y tiene que coincidir
+> exactamente con la registrada en el proveedor.
+
 ### Datos de prueba de la saga Trails
 
 Para ampliar los datos de prueba con **11 juegos de la saga
@@ -428,6 +491,18 @@ restablecimiento por admin (cierra las sesiones del afectado, prohibido sobre
 la propia cuenta), permisos `403` de gestor/usuario en ambas vías, y
 eliminación de una cuenta con ejemplares (cascada, `400` al borrarse a sí
 mismo, `404` inexistente y muerte de sus tokens).
+
+### Pruebas funcionales (Selenium) y de estrés (Locust)
+
+```bash
+pip install -r requirements-test.txt
+python -m pytest                                   # 18 pruebas E2E en Chrome (levanta su propio servidor)
+python tests/servidor_aislado.py --port 8765       # API con BD temporal para la carga
+locust -f tests/estres/locustfile.py --host http://127.0.0.1:8765
+```
+
+Cómo están hechas, cómo se ejecutan y los resultados obtenidos se explican en
+[`DEVOPS_Y_PRUEBAS.md`](../DEVOPS_Y_PRUEBAS.md).
 
 ## Estructura del proyecto
 

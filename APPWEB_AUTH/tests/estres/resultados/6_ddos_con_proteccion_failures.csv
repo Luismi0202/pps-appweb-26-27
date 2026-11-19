@@ -1,0 +1,5 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,[ATAQUE] POST /api/auth/login,HTTPError('401 Client Error: Unauthorized for url: [ATAQUE] POST /api/auth/login'),20,2026-11-19T15:05:34Z,2026-11-19T15:05:35Z
+POST,[ATAQUE] POST /api/auth/login,HTTPError('429 Client Error: Too Many Requests for url: [ATAQUE] POST /api/auth/login'),22899,2026-11-19T15:05:35Z,2026-11-19T15:06:32Z
+GET,[ATAQUE] GET /api/videojuegos,HTTPError('429 Client Error: Too Many Requests for url: [ATAQUE] GET /api/videojuegos'),7220,2026-11-19T15:05:38Z,2026-11-19T15:06:32Z
+GET,[ATAQUE] GET /api/videojuegos,HTTPError('401 Client Error: Unauthorized for url: [ATAQUE] GET /api/videojuegos'),280,2026-11-19T15:05:35Z,2026-11-19T15:05:38Z

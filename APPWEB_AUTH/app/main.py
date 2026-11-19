@@ -18,6 +18,8 @@ from app.routers import (
     videojuegos,
 )
 from app.seed import asegurar_admin, asignar_huerfanos, seed_si_vacio
+from app.routers import oauth  # login con Google/GitHub (crea la tabla cuentas_oauth)
+from app.anti_ddos import AntiDDoS  # límites por IP frente a abusos/DoS
 
 
 @asynccontextmanager
@@ -73,6 +75,10 @@ app = FastAPI(
     contact={"name": "API Colección de Videojuegos"},
 )
 
+# Anti-DDoS: límites por IP y tamaño máximo de cuerpo (ver app/anti_ddos.py).
+# Se añade antes que CORS para que CORS lo envuelva y los 429 lleven sus cabeceras.
+app.add_middleware(AntiDDoS)
+
 # CORS: permite peticiones desde cualquier frontend (páginas web, Postman...)
 app.add_middleware(
     CORSMiddleware,
@@ -84,6 +90,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(auth.router_usuarios)
+app.include_router(oauth.router)
 app.include_router(videojuegos.router)
 app.include_router(plataformas.router)
 app.include_router(generos.router)

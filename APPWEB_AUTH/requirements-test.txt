@@ -1,0 +1,7 @@
+# Dependencias solo para las pruebas (no hacen falta en producción).
+-r requirements.txt
+pytest>=8.0
+selenium>=4.20      # pruebas funcionales en navegador (Selenium Manager trae el driver)
+locust>=2.30        # pruebas de carga y estrés
+requests>=2.31
+httpx>=0.27         # TestClient de FastAPI (pruebas del login con Google/GitHub)

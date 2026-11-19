@@ -1,0 +1,34 @@
+/* Ludoteca · botones de login social (Google / GitHub) */
+.auth-social[hidden],
+.auth-social-btn[hidden] { display: none !important; }
+
+.auth-social { margin-top: 18px; }
+
+.auth-social-sep {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 14px; font-size: 13px; font-weight: 700;
+  color: var(--tinta-suave, #6b6580);
+}
+.auth-social-sep::before,
+.auth-social-sep::after {
+  content: ""; flex: 1; height: 2px; background: var(--linea, #ECE0D1); border-radius: 2px;
+}
+
+.auth-social-botones { display: grid; gap: 10px; }
+
+.auth-social-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 11px 16px; border-radius: 14px;
+  border: 2px solid var(--linea, #ECE0D1);
+  background: var(--blanco, #fff); color: var(--tinta, #34304A);
+  font-weight: 800; font-size: 15px; text-decoration: none;
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.auth-social-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--uva, #5B4BD6);
+  box-shadow: 0 6px 16px rgba(52, 48, 74, .08);
+}
+.auth-social-btn svg { width: 20px; height: 20px; flex: none; }
+.auth-social-btn.github { background: #24292f; border-color: #24292f; color: #fff; }
+.auth-social-btn.github:hover { border-color: #24292f; background: #32383f; }

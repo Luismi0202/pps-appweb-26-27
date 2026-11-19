@@ -1,0 +1,29 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+GET,/api/videojuegos,HTTPError('401 Client Error: Unauthorized for url: /api/videojuegos'),263,2026-11-19T15:06:57Z,2026-11-19T15:08:52Z
+GET,/api/videojuegos?genero&plataforma,HTTPError('401 Client Error: Unauthorized for url: /api/videojuegos?genero&plataforma'),95,2026-11-19T15:07:04Z,2026-11-19T15:08:51Z
+GET,/api/generos,HTTPError('503 Server Error: Service Unavailable for url: /api/generos'),484,2026-11-19T15:06:56Z,2026-11-19T15:08:52Z
+GET,/api/plataformas,HTTPError('503 Server Error: Service Unavailable for url: /api/plataformas'),499,2026-11-19T15:06:56Z,2026-11-19T15:08:52Z
+POST,/api/colecciones,HTTPError('401 Client Error: Unauthorized for url: /api/colecciones'),89,2026-11-19T15:07:00Z,2026-11-19T15:08:51Z
+GET,/api/colecciones,HTTPError('503 Server Error: Service Unavailable for url: /api/colecciones'),1538,2026-11-19T15:06:57Z,2026-11-19T15:08:53Z
+DELETE,/api/colecciones/{id},HTTPError('503 Server Error: Service Unavailable for url: /api/colecciones/{id}'),11,2026-11-19T15:07:05Z,2026-11-19T15:08:36Z
+GET,/api/salud,HTTPError('503 Server Error: Service Unavailable for url: /api/salud'),515,2026-11-19T15:06:56Z,2026-11-19T15:08:52Z
+PATCH,/api/colecciones/{id}/favorito,HTTPError('503 Server Error: Service Unavailable for url: /api/colecciones/{id}/favorito'),16,2026-11-19T15:07:04Z,2026-11-19T15:08:51Z
+GET,/api/auth/yo,HTTPError('503 Server Error: Service Unavailable for url: /api/auth/yo'),131,2026-11-19T15:07:09Z,2026-11-19T15:08:52Z
+GET,/api/videojuegos/{id},HTTPError('401 Client Error: Unauthorized for url: /api/videojuegos/{id}'),212,2026-11-19T15:06:57Z,2026-11-19T15:08:52Z
+POST,/api/auth/registro,CatchResponseError('registro 503'),78,2026-11-19T15:06:57Z,2026-11-19T15:07:09Z
+GET,/api/colecciones,HTTPError('401 Client Error: Unauthorized for url: /api/colecciones'),109,2026-11-19T15:07:04Z,2026-11-19T15:08:52Z
+GET,/api/videojuegos/{id},HTTPError('503 Server Error: Service Unavailable for url: /api/videojuegos/{id}'),2104,2026-11-19T15:06:56Z,2026-11-19T15:08:52Z
+POST,/api/auth/login,CatchResponseError('login 503'),1016,2026-11-19T15:06:56Z,2026-11-19T15:08:52Z
+GET,/api/estadisticas/*,HTTPError('503 Server Error: Service Unavailable for url: /api/estadisticas/*'),2906,2026-11-19T15:06:58Z,2026-11-19T15:08:52Z
+GET,/api/desarrolladoras,HTTPError('503 Server Error: Service Unavailable for url: /api/desarrolladoras'),476,2026-11-19T15:06:56Z,2026-11-19T15:08:52Z
+GET,/api/plataformas,HTTPError('401 Client Error: Unauthorized for url: /api/plataformas'),64,2026-11-19T15:06:59Z,2026-11-19T15:08:51Z
+GET,/api/estadisticas/*,HTTPError('401 Client Error: Unauthorized for url: /api/estadisticas/*'),320,2026-11-19T15:07:00Z,2026-11-19T15:08:52Z
+GET,/api/videojuegos?q=,HTTPError('401 Client Error: Unauthorized for url: /api/videojuegos?q='),147,2026-11-19T15:07:00Z,2026-11-19T15:08:52Z
+GET,/api/desarrolladoras,HTTPError('401 Client Error: Unauthorized for url: /api/desarrolladoras'),82,2026-11-19T15:06:59Z,2026-11-19T15:08:47Z
+POST,/api/colecciones,HTTPError('503 Server Error: Service Unavailable for url: /api/colecciones'),1095,2026-11-19T15:06:57Z,2026-11-19T15:08:52Z
+GET,/api/videojuegos?genero&plataforma,HTTPError('503 Server Error: Service Unavailable for url: /api/videojuegos?genero&plataforma'),1009,2026-11-19T15:06:57Z,2026-11-19T15:08:52Z
+PUT,/api/colecciones/{id},HTTPError('503 Server Error: Service Unavailable for url: /api/colecciones/{id}'),24,2026-11-19T15:07:02Z,2026-11-19T15:08:50Z
+GET,/api/videojuegos?q=,HTTPError('503 Server Error: Service Unavailable for url: /api/videojuegos?q='),1599,2026-11-19T15:06:56Z,2026-11-19T15:08:53Z
+GET,/api/generos,HTTPError('401 Client Error: Unauthorized for url: /api/generos'),76,2026-11-19T15:06:59Z,2026-11-19T15:08:50Z
+POST,/api/auth/refresh,CatchResponseError('refresh 503'),125,2026-11-19T15:07:04Z,2026-11-19T15:08:52Z
+GET,/api/videojuegos,HTTPError('503 Server Error: Service Unavailable for url: /api/videojuegos'),2637,2026-11-19T15:06:56Z,2026-11-19T15:08:52Z

@@ -1,0 +1,22 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+GET,/api/desarrolladoras,HTTPError('500 Server Error: Internal Server Error for url: /api/desarrolladoras'),1,2026-11-19T13:03:04Z,2026-11-19T13:03:04Z
+GET,/api/colecciones,"ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None)",2,2026-11-19T13:03:34Z,2026-11-19T13:03:34Z
+PATCH,/api/colecciones/{id}/favorito,HTTPError('500 Server Error: Internal Server Error for url: /api/colecciones/{id}/favorito'),2,2026-11-19T13:03:34Z,2026-11-19T13:04:04Z
+POST,/api/auth/login,CatchResponseError('login 500'),19,2026-11-19T13:03:04Z,2026-11-19T13:04:04Z
+GET,/api/videojuegos/{id},"ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None)",2,2026-11-19T13:03:04Z,2026-11-19T13:03:34Z
+GET,/api/colecciones,HTTPError('500 Server Error: Internal Server Error for url: /api/colecciones'),6,2026-11-19T13:03:04Z,2026-11-19T13:04:04Z
+GET,/api/auth/yo,HTTPError('500 Server Error: Internal Server Error for url: /api/auth/yo'),3,2026-11-19T13:03:34Z,2026-11-19T13:04:04Z
+GET,/api/estadisticas/*,"ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None)",1,2026-11-19T13:04:04Z,2026-11-19T13:04:04Z
+POST,/api/auth/registro,CatchResponseError('registro 500'),5,2026-11-19T13:03:34Z,2026-11-19T13:03:34Z
+GET,/api/videojuegos/{id},HTTPError('500 Server Error: Internal Server Error for url: /api/videojuegos/{id}'),17,2026-11-19T13:03:04Z,2026-11-19T13:04:04Z
+PUT,/api/colecciones/{id},HTTPError('500 Server Error: Internal Server Error for url: /api/colecciones/{id}'),3,2026-11-19T13:03:04Z,2026-11-19T13:04:04Z
+POST,/api/colecciones,HTTPError('500 Server Error: Internal Server Error for url: /api/colecciones'),8,2026-11-19T13:03:04Z,2026-11-19T13:04:04Z
+GET,/api/estadisticas/*,HTTPError('500 Server Error: Internal Server Error for url: /api/estadisticas/*'),3,2026-11-19T13:03:04Z,2026-11-19T13:04:05Z
+GET,/api/videojuegos?q=,HTTPError('500 Server Error: Internal Server Error for url: /api/videojuegos?q='),8,2026-11-19T13:03:04Z,2026-11-19T13:04:04Z
+GET,/api/plataformas,HTTPError('500 Server Error: Internal Server Error for url: /api/plataformas'),1,2026-11-19T13:03:04Z,2026-11-19T13:03:04Z
+GET,/api/estadisticas/*,"ConnectionAbortedError(10053, 'Se ha anulado una conexión establecida por el software en su equipo host', None, 10053, None)",1,2026-11-19T13:03:04Z,2026-11-19T13:03:04Z
+POST,/api/auth/refresh,CatchResponseError('refresh 500'),2,2026-11-19T13:03:34Z,2026-11-19T13:04:04Z
+POST,/api/colecciones,"ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None)",2,2026-11-19T13:03:34Z,2026-11-19T13:03:34Z
+GET,/api/videojuegos,HTTPError('500 Server Error: Internal Server Error for url: /api/videojuegos'),19,2026-11-19T13:03:04Z,2026-11-19T13:04:05Z
+GET,/api/generos,"ConnectionAbortedError(10053, 'Se ha anulado una conexión establecida por el software en su equipo host', None, 10053, None)",1,2026-11-19T13:03:04Z,2026-11-19T13:03:04Z
+GET,/api/videojuegos?genero&plataforma,HTTPError('500 Server Error: Internal Server Error for url: /api/videojuegos?genero&plataforma'),9,2026-11-19T13:03:04Z,2026-11-19T13:04:04Z

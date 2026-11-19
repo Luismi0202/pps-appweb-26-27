@@ -1,0 +1,6 @@
+# Artefactos de las pruebas (no se versionan)
+__pycache__/
+.pytest_cache/
+tests/funcionales/capturas/
+resultados-funcionales.xml
+informe/
